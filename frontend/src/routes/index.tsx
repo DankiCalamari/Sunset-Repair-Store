@@ -11,8 +11,11 @@ function SetupGate({ children }: { children: React.ReactNode }) {
     const checkSetupStatus = async () => {
       try {
         const response = await setupApi.status();
-        if (response.needs_setup) navigate("/setup", { replace: true });
-        else setChecked(true);
+        if (response.needs_setup) {
+          navigate("/setup", { replace: true });
+        } else {
+          setChecked(true);
+        }
       } catch (error) {
         console.error("Failed to check setup status:", error);
         setError("Failed to check setup status. Please try again later.");
@@ -20,7 +23,12 @@ function SetupGate({ children }: { children: React.ReactNode }) {
       }
     };
 
-    checkSetupStatus();
+    const hasSetupCompleted = localStorage.getItem("setup_completed");
+    if (hasSetupCompleted === "true") {
+      setChecked(true);
+    } else {
+      checkSetupStatus();
+    }
   }, [navigate]);
 
   if (error) return <div>{error}</div>;
