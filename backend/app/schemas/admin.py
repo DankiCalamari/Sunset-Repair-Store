@@ -38,8 +38,16 @@ class AdminUserResponse(BaseModel):
 class BusinessSettingsResponse(BaseModel):
     business_id: UUID
     business_name: str
+    legal_name: str | None
+    abn: str | None
     email: str | None
     phone: str | None
+    address_line1: str | None
+    city: str | None
+    state: str | None
+    postcode: str | None
+    timezone: str
+    currency: str
     tax_rate: float
     ticket_prefix: str
     next_ticket_seq: int
@@ -50,8 +58,16 @@ class BusinessSettingsResponse(BaseModel):
 
 class BusinessSettingsUpdate(BaseModel):
     business_name: str | None = Field(default=None, min_length=1, max_length=255)
+    legal_name: str | None = Field(default=None, max_length=255)
+    abn: str | None = Field(default=None, max_length=20)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=50)
+    address_line1: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=100)
+    state: str | None = Field(default=None, max_length=50)
+    postcode: str | None = Field(default=None, max_length=20)
+    timezone: str | None = Field(default=None, max_length=50)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
     tax_rate: float | None = Field(default=None, ge=0, le=1)
     ticket_prefix: str | None = Field(default=None, min_length=1, max_length=10)
     next_ticket_seq: int | None = Field(default=None, ge=1)

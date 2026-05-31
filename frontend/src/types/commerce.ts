@@ -126,14 +126,72 @@ export interface TicketCommunication {
 
 export interface InventoryItem {
   id: string;
+  business_id: string;
+  category_id: string | null;
   sku: string;
   name: string;
   description: string | null;
   barcode: string | null;
+  unit_cost: string;
   unit_price: string;
   quantity_on_hand: number;
   reorder_level: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryCategory {
+  id: string;
+  business_id: string;
+  name: string;
+  slug: string;
+}
+
+export interface StockMovement {
+  id: string;
+  business_id: string;
+  inventory_item_id: string;
+  movement_type: string;
+  quantity: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  notes: string | null;
+  created_by_id: string | null;
+  created_at: string;
+}
+
+export interface Supplier {
+  id: string;
+  business_id: string;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PurchaseOrderLine {
+  id: string;
+  inventory_item_id: string;
+  item_name: string | null;
+  quantity_ordered: number;
+  quantity_received: number;
+  unit_cost: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  business_id: string;
+  supplier_id: string;
+  supplier_name: string | null;
+  po_number: string;
+  status: string;
+  ordered_at: string | null;
+  received_at: string | null;
+  notes: string | null;
+  lines: PurchaseOrderLine[];
   created_at: string;
 }
 
@@ -227,8 +285,16 @@ export interface AdminUser {
 export interface BusinessSettings {
   business_id: string;
   business_name: string;
+  legal_name: string | null;
+  abn: string | null;
   email: string | null;
   phone: string | null;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+  timezone: string;
+  currency: string;
   tax_rate: number;
   ticket_prefix: string;
   next_ticket_seq: number;

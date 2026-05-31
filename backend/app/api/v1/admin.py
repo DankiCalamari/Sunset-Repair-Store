@@ -33,8 +33,16 @@ async def _settings_response(db: AsyncSession, business_id: UUID) -> BusinessSet
     return BusinessSettingsResponse(
         business_id=business.id,
         business_name=business.name,
+        legal_name=business.legal_name,
+        abn=business.abn,
         email=business.email,
         phone=business.phone,
+        address_line1=business.address_line1,
+        city=business.city,
+        state=business.state,
+        postcode=business.postcode,
+        timezone=business.timezone,
+        currency=business.currency,
         tax_rate=float(settings.tax_rate),
         ticket_prefix=settings.ticket_prefix,
         next_ticket_seq=settings.next_ticket_seq,
@@ -140,7 +148,7 @@ async def update_settings(
     data = body.model_dump(exclude_unset=True)
     if "business_name" in data:
         business.name = data["business_name"]
-    for field in ("email", "phone"):
+    for field in ("legal_name", "abn", "email", "phone", "address_line1", "city", "state", "postcode", "timezone", "currency"):
         if field in data:
             setattr(business, field, data[field])
     for field in ("tax_rate", "ticket_prefix", "next_ticket_seq"):

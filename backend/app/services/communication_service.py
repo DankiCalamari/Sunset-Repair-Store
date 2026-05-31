@@ -150,7 +150,7 @@ async def ticket_context(db: AsyncSession, ticket: RepairTicket) -> dict[str, st
         "customer_name": customer.name if customer else "Customer",
         "customer_email": customer.email if customer and customer.email else "",
         "customer_phone": customer.phone if customer and customer.phone else "",
-        "business_name": business.name if business else "Sunset Country Tech",
+        "business_name": business.name if business else "",
         "status": ticket.status.replace("_", " "),
     }
 

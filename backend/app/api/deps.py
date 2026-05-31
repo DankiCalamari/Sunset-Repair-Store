@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import Depends, Header
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import forbidden, not_found
-from app.core.permissions import Permission, role_has_permission
+from app.core.permissions import Permission, permissions_for_role, role_has_permission
 from app.core.security import safe_decode_token
 from app.db.session import get_db
 from app.models.business import User
@@ -41,7 +41,6 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if not user:
         raise not_found("User")
-    from app.core.permissions import permissions_for_role
 
     perms = payload.get("permissions") or permissions_for_role(user.role)
     return CurrentUser(

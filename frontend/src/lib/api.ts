@@ -42,6 +42,34 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
 }
 
+export const setupApi = {
+  status: () => api<{ needs_setup: boolean }>("/api/v1/setup/status"),
+  run: (data: {
+    business_name: string;
+    business_slug: string;
+    legal_name?: string;
+    abn?: string;
+    email?: string;
+    phone?: string;
+    address_line1?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    timezone: string;
+    currency: string;
+    ticket_prefix: string;
+    tax_rate: number;
+    owner_name: string;
+    owner_email: string;
+    owner_password: string;
+  }) =>
+    api<{
+      access_token: string;
+      refresh_token: string;
+      user: { id: string; email: string; full_name: string; role: string; permissions: string[] };
+    }>("/api/v1/setup", { method: "POST", body: JSON.stringify(data) }),
+};
+
 export const authApi = {
   login: (email: string, password: string, business_slug?: string) =>
     api<{
@@ -177,14 +205,130 @@ export const invoicesApi = {
 };
 
 export const inventoryApi = {
-  list: (q?: string, page = 1) =>
+  // Items
+  list: (q?: string, page = 1, lowStock = false, categoryId?: string) =>
     api<PaginatedResponse<import("@/types/commerce").InventoryItem>>(
-      `/api/v1/inventory/items?q=${encodeURIComponent(q || "")}&page=${page}&page_size=100`
+      `/api/v1/inventory/items?q=${encodeURIComponent(q || "")}&page=${page}&page_size=100${lowStock ? "&low_stock=true" : ""}${categoryId ? `&category_id=${categoryId}` : ""}`
     ),
+  get: (id: string) =>
+    api<import("@/types/commerce").InventoryItem>(`/api/v1/inventory/items/${id}`),
   byBarcode: (code: string) =>
     api<import("@/types/commerce").InventoryItem>(
       `/api/v1/inventory/items/by-barcode/${encodeURIComponent(code)}`
     ),
+  create: (data: {
+    sku: string;
+    name: string;
+    description?: string;
+    barcode?: string;
+    category_id?: string;
+    unit_cost?: number;
+    unit_price: number;
+    quantity_on_hand?: number;
+    reorder_level?: number;
+  }) =>
+    api<import("@/types/commerce").InventoryItem>("/api/v1/inventory/items", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (
+    id: string,
+    data: Partial<{
+      name: string;
+      description: string | null;
+      barcode: string | null;
+      category_id: string | null;
+      unit_cost: number;
+      unit_price: number;
+      reorder_level: number;
+      is_active: boolean;
+    }>
+  ) =>
+    api<import("@/types/commerce").InventoryItem>(`/api/v1/inventory/items/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deactivate: (id: string) =>
+    api<void>(`/api/v1/inventory/items/${id}`, { method: "DELETE" }),
+  adjust: (id: string, quantity: number, notes?: string) =>
+    api<import("@/types/commerce").InventoryItem>(`/api/v1/inventory/items/${id}/adjust`, {
+      method: "POST",
+      body: JSON.stringify({ quantity, notes }),
+    }),
+  movements: (id: string) =>
+    api<import("@/types/commerce").StockMovement[]>(`/api/v1/inventory/items/${id}/movements`),
+
+  // Categories
+  categories: () =>
+    api<import("@/types/commerce").InventoryCategory[]>("/api/v1/inventory/categories"),
+  createCategory: (data: { name: string; slug: string }) =>
+    api<import("@/types/commerce").InventoryCategory>("/api/v1/inventory/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateCategory: (id: string, data: { name?: string; slug?: string }) =>
+    api<import("@/types/commerce").InventoryCategory>(`/api/v1/inventory/categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteCategory: (id: string) =>
+    api<void>(`/api/v1/inventory/categories/${id}`, { method: "DELETE" }),
+
+  // Suppliers
+  suppliers: (q?: string, page = 1) =>
+    api<PaginatedResponse<import("@/types/commerce").Supplier>>(
+      `/api/v1/inventory/suppliers?q=${encodeURIComponent(q || "")}&page=${page}`
+    ),
+  createSupplier: (data: {
+    name: string;
+    contact_name?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+  }) =>
+    api<import("@/types/commerce").Supplier>("/api/v1/inventory/suppliers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateSupplier: (
+    id: string,
+    data: Partial<{ name: string; contact_name: string; email: string; phone: string; notes: string }>
+  ) =>
+    api<import("@/types/commerce").Supplier>(`/api/v1/inventory/suppliers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteSupplier: (id: string) =>
+    api<void>(`/api/v1/inventory/suppliers/${id}`, { method: "DELETE" }),
+
+  // Purchase Orders
+  purchaseOrders: (status?: string, page = 1) =>
+    api<PaginatedResponse<import("@/types/commerce").PurchaseOrder>>(
+      `/api/v1/inventory/purchase-orders?${status ? `status=${status}&` : ""}page=${page}`
+    ),
+  getPurchaseOrder: (id: string) =>
+    api<import("@/types/commerce").PurchaseOrder>(`/api/v1/inventory/purchase-orders/${id}`),
+  createPurchaseOrder: (data: {
+    supplier_id: string;
+    notes?: string;
+    lines: { inventory_item_id: string; quantity_ordered: number; unit_cost: number }[];
+  }) =>
+    api<import("@/types/commerce").PurchaseOrder>("/api/v1/inventory/purchase-orders", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  submitPurchaseOrder: (id: string) =>
+    api<import("@/types/commerce").PurchaseOrder>(`/api/v1/inventory/purchase-orders/${id}/submit`, {
+      method: "POST",
+    }),
+  receivePurchaseOrder: (
+    id: string,
+    lines: { line_id: string; quantity_received: number }[]
+  ) =>
+    api<import("@/types/commerce").PurchaseOrder>(`/api/v1/inventory/purchase-orders/${id}/receive`, {
+      method: "POST",
+      body: JSON.stringify(lines),
+    }),
 };
 
 export const appointmentsApi = {

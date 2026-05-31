@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 
 export function LoginPage() {
-  const [email, setEmail] = useState("owner@demo.sunsetcountry.tech");
-  const [password, setPassword] = useState("ChangeMe123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { login, loading } = useAuth();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-xl bg-accent" />
-          <CardTitle className="text-2xl">Sunset Country Tech ERP</CardTitle>
+          <CardTitle className="text-2xl">Repair Shop ERP</CardTitle>
           <p className="text-sm text-muted-foreground">Sign in to your repair shop</p>
         </CardHeader>
         <CardContent>

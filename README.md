@@ -17,14 +17,18 @@ Production-ready repair shop management platform — SaaS-capable, multi-tenant 
 ## Quick start
 
 ```bash
-# Copy environment template
+# Copy environment template and fill in all REPLACE_ values
 cp .env.example .env
 
 # Start all services
 docker compose up -d
 
-# Run migrations (first time)
-docker compose exec api alembic upgrade head
+# Apply schema (first time)
+docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/schema.sql
+
+# Bootstrap your first business and owner account
+# Edit database/seed.sql with your details, then run:
+docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
 
 # API docs
 open http://localhost:8000/docs
@@ -32,8 +36,6 @@ open http://localhost:8000/docs
 # Frontend
 open http://localhost:5173
 ```
-
-Default dev credentials (after seed): `owner@demo.sunsetcountry.tech` / `ChangeMe123!`
 
 ## Documentation
 

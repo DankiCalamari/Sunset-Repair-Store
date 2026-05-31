@@ -20,9 +20,9 @@
 
 ```json
 {
-  "email": "owner@demo.sunsetcountry.tech",
-  "password": "ChangeMe123!",
-  "business_slug": "sunset-demo"
+  "email": "owner@yourdomain.com",
+  "password": "your-password",
+  "business_slug": "your-business-slug"
 }
 ```
 

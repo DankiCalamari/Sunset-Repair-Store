@@ -32,8 +32,8 @@ export function Sidebar() {
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
         <div className="h-8 w-8 rounded-lg bg-accent" />
         <div>
-          <p className="text-sm font-bold leading-tight">Sunset Country</p>
-          <p className="text-xs text-muted-foreground">Tech ERP</p>
+          <p className="text-sm font-bold leading-tight">Repair Shop</p>
+          <p className="text-xs text-muted-foreground">ERP</p>
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-4">

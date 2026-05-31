@@ -1,6 +1,34 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import useAuth from "@/lib/auth/useAuth";
-import setupApi from "@/services/setupService";
+import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { setupApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { AppShell } from "@/components/layout/AppShell";
+import { SetupPage } from "@/pages/setup/SetupPage";
+import { LoginPage } from "@/pages/auth/LoginPage";
+import { DashboardPage } from "@/pages/dashboard/DashboardPage";
+import { CustomersPage } from "@/pages/customers/CustomersPage";
+import { TicketsPage } from "@/pages/tickets/TicketsPage";
+import { InventoryPage } from "@/pages/inventory/InventoryPage";
+import { QuotesPage } from "@/pages/quotes/QuotesPage";
+import { InvoicesPage } from "@/pages/invoices/InvoicesPage";
+import { AppointmentsPage } from "@/pages/appointments/AppointmentsPage";
+import { PosPage } from "@/pages/pos/PosPage";
+import { ReportsPage } from "@/pages/reports/ReportsPage";
+import { AdminPage } from "@/pages/admin/AdminPage";
+import { PortalTrackerPage } from "@/pages/portal/PortalTrackerPage";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, navigate]);
+
+  return user ? <>{children}</> : null;
+}
 
 function SetupGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -41,6 +69,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/setup" element={<SetupPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/portal/:ticketId" element={<PortalTrackerPage />} />
       <Route
         element={
           <ProtectedRoute>

@@ -7,11 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
-from app.services.auth_service import ensure_demo_owner
 from app.services.communication_service import ensure_communication_schema, imap_poll_loop
-from app.services.seed_service import seed_demo_data
-from sqlalchemy import select
-from app.models.business import Business
 
 settings = get_settings()
 
@@ -21,14 +17,7 @@ async def lifespan(app: FastAPI):
     poller: asyncio.Task | None = None
     async with AsyncSessionLocal() as db:
         await ensure_communication_schema(db)
-        result = await db.execute(
-            select(Business).where(Business.slug == "sunset-demo")
-        )
-        business = result.scalar_one_or_none()
-        if business:
-            owner = await ensure_demo_owner(db, business.id)
-            await seed_demo_data(db, business.id, owner.id)
-            await db.commit()
+        await db.commit()
     poller = asyncio.create_task(imap_poll_loop(AsyncSessionLocal))
     yield
     if poller:

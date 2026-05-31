@@ -16,7 +16,7 @@ export function PortalTrackerPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Track your repair</h1>
-        <p className="text-muted-foreground">Ticket SCT-1001 · iPhone 14 Pro</p>
+        <p className="text-muted-foreground">Enter your ticket number to check the status of your repair.</p>
       </div>
       <Card>
         <CardHeader>

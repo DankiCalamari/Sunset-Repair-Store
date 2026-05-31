@@ -1,34 +1,53 @@
--- Demo seed for local development
--- Password: ChangeMe123! (bcrypt hash below is placeholder — run backend seed script for real hash)
+-- Production bootstrap
+-- Run this once after applying schema.sql to create your first business and owner account.
+--
+-- BEFORE RUNNING:
+--   1. Replace all placeholder values marked with <REPLACE_...>
+--   2. Generate a bcrypt hash for your password:
+--        python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('<YOUR_PASSWORD>'))"
+--   3. Choose a unique slug (lowercase, hyphens only, e.g. 'my-repair-shop')
 
-INSERT INTO businesses (id, name, slug, email, phone, city, state, postcode)
-VALUES (
-  'a0000000-0000-4000-8000-000000000001',
-  'Sunset Country Tech',
-  'sunset-demo',
-  'hello@sunsetcountry.tech',
-  '03 5000 0000',
-  'Mildura',
-  'VIC',
-  '3500'
+-- ─── Business ────────────────────────────────────────────────────────────────
+
+INSERT INTO businesses (
+  id, name, slug, legal_name, abn,
+  email, phone,
+  address_line1, city, state, postcode, country,
+  timezone, currency
+) VALUES (
+  uuid_generate_v4(),
+  '<REPLACE_BUSINESS_NAME>',          -- e.g. 'Sunset Country Tech'
+  '<REPLACE_SLUG>',                   -- e.g. 'sunset-country-tech'
+  '<REPLACE_LEGAL_NAME>',             -- e.g. 'Sunset Country Tech Pty Ltd'
+  '<REPLACE_ABN>',                    -- e.g. '12 345 678 901'
+  '<REPLACE_EMAIL>',                  -- e.g. 'hello@yourdomain.com'
+  '<REPLACE_PHONE>',                  -- e.g. '03 5000 0000'
+  '<REPLACE_ADDRESS>',                -- e.g. '123 Main St'
+  '<REPLACE_CITY>',                   -- e.g. 'Mildura'
+  '<REPLACE_STATE>',                  -- e.g. 'VIC'
+  '<REPLACE_POSTCODE>',               -- e.g. '3500'
+  'AU',
+  'Australia/Melbourne',
+  'AUD'
 );
 
+-- ─── Business settings ────────────────────────────────────────────────────────
+
 INSERT INTO business_settings (business_id, ticket_prefix, next_ticket_seq, tax_rate)
-VALUES ('a0000000-0000-4000-8000-000000000001', 'SCT', 1001, 0.1000);
+SELECT id, '<REPLACE_TICKET_PREFIX>', 1, 0.1000   -- ticket_prefix e.g. 'SCT', tax_rate 0.1 = 10% GST
+FROM businesses
+WHERE slug = '<REPLACE_SLUG>';
 
-INSERT INTO inventory_categories (id, business_id, name, slug) VALUES
-  ('b1000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'Screens', 'screens'),
-  ('b1000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Batteries', 'batteries'),
-  ('b1000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'Accessories', 'accessories');
+-- ─── Owner account ───────────────────────────────────────────────────────────
+-- Generate password hash first (see instructions above)
 
-INSERT INTO service_types (id, business_id, name, duration_minutes) VALUES
-  ('c1000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'Screen Repair Consultation', 30),
-  ('c1000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001', 'Battery Replacement', 45),
-  ('c1000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'General Diagnostic', 60);
-
-INSERT INTO notification_templates (business_id, trigger, channel, subject, body_template) VALUES
-  ('a0000000-0000-4000-8000-000000000001', 'ticket_created', 'email',
-   'Repair received — {{ticket_number}}',
-   'Hi {{customer_name}}, we have received your {{device_model}}. Track progress: {{portal_link}}'),
-  ('a0000000-0000-4000-8000-000000000001', 'device_ready', 'sms', NULL,
-   'Your device is ready for pickup! Ticket {{ticket_number}}. {{business_name}}');
+INSERT INTO users (business_id, email, password_hash, full_name, role, is_active)
+SELECT
+  id,
+  '<REPLACE_OWNER_EMAIL>',
+  '<REPLACE_BCRYPT_HASH>',
+  '<REPLACE_OWNER_NAME>',
+  'owner',
+  true
+FROM businesses
+WHERE slug = '<REPLACE_SLUG>';

@@ -6,9 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Sunset Country Tech ERP"
-    app_env: str = "development"
-    app_debug: bool = True
+    app_name: str = "Repair Shop ERP"
+    app_env: str = "production"
+    app_debug: bool = False
     app_secret_key: str = "dev-secret-change-in-production-min-32-chars"
 
     database_url: str = "postgresql+asyncpg://sunset:sunset_dev_password@localhost:5432/sunset_erp"

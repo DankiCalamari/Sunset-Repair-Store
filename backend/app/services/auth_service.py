@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import forbidden, not_found
+from app.core.exceptions import forbidden
 from app.core.permissions import permissions_for_role
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.business import Business, User
@@ -59,21 +59,3 @@ async def authenticate(
             permissions=perms,
         ),
     )
-
-
-async def ensure_demo_owner(db: AsyncSession, business_id: UUID) -> User:
-    """Create demo owner if missing (development bootstrap)."""
-    email = "owner@demo.sunsetcountry.tech"
-    result = await db.execute(select(User).where(User.email == email))
-    existing = result.scalar_one_or_none()
-    if existing:
-        return existing
-    user = User(
-        business_id=business_id,
-        email=email,
-        password_hash=hash_password("ChangeMe123!"),
-        full_name="Demo Owner",
-        role="owner",
-    )
-    db.add(user)
-    return user
