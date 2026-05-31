@@ -1,44 +1,31 @@
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { AppShell } from "@/components/layout/AppShell";
-import { useAuth } from "@/hooks/useAuth";
-import { setupApi } from "@/lib/api";
-import { LoginPage } from "@/pages/auth/LoginPage";
-import { SetupPage } from "@/pages/setup/SetupPage";
-import { DashboardPage } from "@/pages/dashboard/DashboardPage";
-import { PortalTrackerPage } from "@/pages/portal/PortalTrackerPage";
-import { InventoryPage } from "@/pages/inventory/InventoryPage";
-import { CustomersPage } from "@/pages/customers/CustomersPage";
-import { QuotesPage } from "@/pages/quotes/QuotesPage";
-import { InvoicesPage } from "@/pages/invoices/InvoicesPage";
-import { TicketsPage } from "@/pages/tickets/TicketsPage";
-import { AppointmentsPage } from "@/pages/appointments/AppointmentsPage";
-import { PosPage } from "@/pages/pos/PosPage";
-import { ReportsPage } from "@/pages/reports/ReportsPage";
-import { AdminPage } from "@/pages/admin/AdminPage";
+import { Navigate, Route, Routes } from "react-router-dom";
+import useAuth from "@/lib/auth/useAuth";
+import setupApi from "@/services/setupService";
 
 function SetupGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setupApi
-      .status()
-      .then(({ needs_setup }) => {
-        if (needs_setup) navigate("/setup", { replace: true });
+    const checkSetupStatus = async () => {
+      try {
+        const response = await setupApi.status();
+        if (response.needs_setup) navigate("/setup", { replace: true });
         else setChecked(true);
-      })
-      .catch(() => setChecked(true)); // if API is unreachable, let normal flow handle it
+      } catch (error) {
+        console.error("Failed to check setup status:", error);
+        setError("Failed to check setup status. Please try again later.");
+        navigate("/login", { replace: true });
+      }
+    };
+
+    checkSetupStatus();
   }, [navigate]);
 
-  if (!checked) return null;
-  return <>{children}</>;
-}
+  if (error) return <div>{error}</div>;
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return checked ? <>{children}</> : null;
 }
 
 export function AppRoutes() {
@@ -46,14 +33,11 @@ export function AppRoutes() {
     <Routes>
       <Route path="/setup" element={<SetupPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/portal/track" element={<PortalTrackerPage />} />
       <Route
         element={
-          <SetupGate>
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          </SetupGate>
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
         }
       >
         <Route index element={<DashboardPage />} />
