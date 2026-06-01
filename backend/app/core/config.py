@@ -34,9 +34,8 @@ class Settings(BaseSettings):
     
     @property
     def get_database_url(self) -> str:
-        """Convert DATABASE_URL to asyncpg format if needed (for Heroku compatibility)"""
+        """Normalize the database URL for asyncpg compatibility."""
         url = self.database_url
-        # Heroku PostgreSQL uses 'postgres://' but asyncpg needs 'postgresql+asyncpg://'
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgresql://"):
