@@ -1,0 +1,15 @@
+{
+  "name": "sunset-repair-store-erp",
+  "version": "1.0.0",
+  "description": "Repair shop management ERP — multi-tenant ready",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT backend.app.main:app"
+  },
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x",
+    "python": "3.12.x"
+  }
+}

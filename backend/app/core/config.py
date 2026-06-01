@@ -31,6 +31,17 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+    
+    @property
+    def get_database_url(self) -> str:
+        """Convert DATABASE_URL to asyncpg format if needed (for Heroku compatibility)"""
+        url = self.database_url
+        # Heroku PostgreSQL uses 'postgres://' but asyncpg needs 'postgresql+asyncpg://'
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
 
 
 @lru_cache

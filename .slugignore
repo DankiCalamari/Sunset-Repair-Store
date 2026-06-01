@@ -1,0 +1,10 @@
+docs/
+database/seed.sql
+TROUBLESHOOTING_LOGIN.md
+RESET_DATABASE.md
+db_diagnostic.py
+.DS_Store
+*.pyc
+__pycache__/
+.pytest_cache/
+node_modules/

@@ -1,8 +1,12 @@
 from contextlib import asynccontextmanager
 import asyncio
+import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -42,6 +46,30 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+# Serve static frontend files (SPA)
+frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve SPA frontend with fallback to index.html for client-side routing"""
+        # Don't interfere with API routes
+        if full_path.startswith("api/"):
+            return {"detail": "Not Found"}, 404
+        
+        file_path = frontend_dist / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        
+        # Return index.html for all other paths (SPA routing)
+        index_path = frontend_dist / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        
+        return {"detail": "Not Found"}, 404
 
 
 @app.get("/health")
