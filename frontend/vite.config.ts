@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: true,
+      allowedHosts: ["repairshop.sunsetcountry.repair"],
       proxy: {
         "/api": {
           target: apiTarget,
