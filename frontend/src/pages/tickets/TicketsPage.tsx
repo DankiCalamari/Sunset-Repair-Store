@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ticketsApi } from "@/lib/api";
+import { ticketsApi, customersApi, devicesApi } from "@/lib/api";
 import type { RepairTicket } from "@/types/commerce";
 
 type ConversationEvent = {
@@ -66,6 +66,22 @@ export function TicketsPage() {
   const [emailHtml, setEmailHtml] = useState("");
   const [emailFiles, setEmailFiles] = useState<FileList | null>(null);
   const [smsMessage, setSmsMessage] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    customer_id: "",
+    device_id: "",
+    issue_description: "",
+    priority: "normal",
+    customer_notes: "",
+    // New device fields
+    new_device: false,
+    manufacturer: "",
+    model: "",
+    imei: "",
+    serial_number: "",
+    colour: "",
+    passcode_provided: "",
+  });
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({

@@ -143,6 +143,17 @@ export const ticketsApi = {
       `/api/v1/tickets?page=${page}&page_size=50`
     ),
   get: (id: string) => api<import("@/types/commerce").RepairTicket>(`/api/v1/tickets/${id}`),
+  create: (data: {
+    customer_id: string;
+    device_id: string;
+    issue_description: string;
+    priority?: string;
+    customer_notes?: string;
+  }) =>
+    api<import("@/types/commerce").RepairTicket>("/api/v1/tickets", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   timeline: (id: string) =>
     api<import("@/types/commerce").TimelineEntry[]>(`/api/v1/tickets/${id}/timeline`),
   communications: (id: string) =>
@@ -381,6 +392,38 @@ export const posApi = {
     lines: { inventory_item_id: string; quantity: number }[];
   }) =>
     api<import("@/types/commerce").PosSale>("/api/v1/pos/sales", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+export interface Device {
+  id: string;
+  business_id: string;
+  customer_id: string;
+  manufacturer: string;
+  model: string;
+  imei: string | null;
+  serial_number: string | null;
+  colour: string | null;
+  passcode_provided: string | null;
+  notes: string | null;
+}
+
+export const devicesApi = {
+  byCustomer: (customerId: string) =>
+    api<Device[]>(`/api/v1/devices/by-customer/${customerId}`),
+  create: (data: {
+    customer_id: string;
+    manufacturer: string;
+    model: string;
+    imei?: string;
+    serial_number?: string;
+    colour?: string;
+    passcode_provided?: string;
+    notes?: string;
+  }) =>
+    api<Device>("/api/v1/devices", {
       method: "POST",
       body: JSON.stringify(data),
     }),
