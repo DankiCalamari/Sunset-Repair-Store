@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { setupApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/layout/AppShell";
 import { SetupPage } from "@/pages/setup/SetupPage";
@@ -28,40 +27,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [user, navigate]);
 
   return user ? <>{children}</> : null;
-}
-
-function SetupGate({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const [checked, setChecked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkSetupStatus = async () => {
-      try {
-        const response = await setupApi.status();
-        if (response.needs_setup) {
-          navigate("/setup", { replace: true });
-        } else {
-          setChecked(true);
-        }
-      } catch (error) {
-        console.error("Failed to check setup status:", error);
-        setError("Failed to check setup status. Please try again later.");
-        navigate("/login", { replace: true });
-      }
-    };
-
-    const hasSetupCompleted = localStorage.getItem("setup_completed");
-    if (hasSetupCompleted === "true") {
-      setChecked(true);
-    } else {
-      checkSetupStatus();
-    }
-  }, [navigate]);
-
-  if (error) return <div>{error}</div>;
-
-  return checked ? <>{children}</> : null;
 }
 
 export function AppRoutes() {

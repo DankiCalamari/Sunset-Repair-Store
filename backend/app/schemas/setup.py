@@ -5,6 +5,15 @@ class SetupStatusResponse(BaseModel):
     needs_setup: bool
 
 
+class SetupVerificationRequest(BaseModel):
+    owner_email: EmailStr
+
+
+class SetupVerificationResponse(BaseModel):
+    code_sent: bool
+    debug_code: str | None = None
+
+
 class SetupRequest(BaseModel):
     # Business
     business_name: str = Field(..., min_length=1, max_length=255)
@@ -26,3 +35,4 @@ class SetupRequest(BaseModel):
     owner_name: str = Field(..., min_length=1, max_length=255)
     owner_email: EmailStr
     owner_password: str = Field(..., min_length=8)
+    verification_code: str | None = Field(None, min_length=6, max_length=6, pattern=r"^\d{6}$")

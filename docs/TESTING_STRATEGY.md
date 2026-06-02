@@ -104,7 +104,7 @@ lint → unit-tests → integration-tests → build-images → e2e-smoke (stagin
 
 ## 8. Test data
 
-- `database/seed.sql` for manual QA
+- Manual test data should be created through setup or test factories
 - Factory Boy factories in `backend/tests/factories/` (phase 2)
 - Never use production data in dev
 

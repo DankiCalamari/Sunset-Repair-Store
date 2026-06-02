@@ -21,8 +21,7 @@ sunset-country-tech-erp/
 │   └── FOLDER_STRUCTURE.md
 │
 ├── database/
-│   ├── schema.sql                     # Canonical DDL (reference)
-│   └── seed.sql                       # Demo tenant + sample data
+│   └── schema.sql                     # Canonical DDL (reference)
 │
 ├── backend/
 │   ├── Dockerfile

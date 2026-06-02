@@ -12,6 +12,7 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
 from app.services.communication_service import ensure_communication_schema, imap_poll_loop
+from app.services.setup_verification_service import ensure_setup_schema
 
 settings = get_settings()
 
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     poller: asyncio.Task | None = None
     async with AsyncSessionLocal() as db:
         await ensure_communication_schema(db)
+        await ensure_setup_schema(db)
         await db.commit()
     poller = asyncio.create_task(imap_poll_loop(AsyncSessionLocal))
     yield
@@ -48,6 +50,11 @@ app.add_middleware(
 app.include_router(api_router)
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "app": settings.app_name}
+
+
 # Serve static frontend files (SPA)
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
@@ -70,8 +77,3 @@ if frontend_dist.exists():
             return FileResponse(index_path)
         
         return {"detail": "Not Found"}, 404
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "app": settings.app_name}

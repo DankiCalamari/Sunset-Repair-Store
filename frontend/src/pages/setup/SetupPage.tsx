@@ -64,12 +64,40 @@ export function SetupPage() {
     owner_email: "",
     owner_password: "",
     owner_password_confirm: "",
+    verification_code: "",
   });
+
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const f =
     (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [field]: e.target.value }));
+
+  const sendVerificationCode = async () => {
+    setVerificationError(null);
+    setVerificationMessage(null);
+    setVerificationSent(false);
+
+    if (!form.owner_email) {
+      setVerificationError("Enter an email address before requesting a code.");
+      return;
+    }
+
+    try {
+      const result = await setupApi.sendVerificationCode(form.owner_email);
+      setVerificationSent(true);
+      setVerificationMessage(
+        result.debug_code
+          ? `Verification code generated. Use code ${result.debug_code} to complete setup.`
+          : "Verification code sent to your email."
+      );
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : "Failed to send verification code.");
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -91,6 +119,7 @@ export function SetupPage() {
         owner_name: form.owner_name,
         owner_email: form.owner_email,
         owner_password: form.owner_password,
+        verification_code: form.verification_code || undefined,
       }),
     onSuccess: (res) => {
       loginDirect(res.access_token, res.refresh_token, res.user);
@@ -111,6 +140,8 @@ export function SetupPage() {
   const canSubmit =
     form.owner_name.trim().length > 0 &&
     form.owner_email.trim().length > 0 &&
+    verificationSent &&
+    form.verification_code.trim().length === 6 &&
     form.owner_password.length >= 8 &&
     form.owner_password === form.owner_password_confirm;
 
@@ -345,9 +376,45 @@ export function SetupPage() {
                 <label className="mb-1 block text-sm font-medium">Full name *</label>
                 <Input placeholder="Your name" value={form.owner_name} onChange={f("owner_name")} />
               </div>
-              <div>
+              <div className="space-y-2">
                 <label className="mb-1 block text-sm font-medium">Email address *</label>
-                <Input type="email" placeholder="you@yourdomain.com" value={form.owner_email} onChange={f("owner_email")} />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="email"
+                    placeholder="you@yourdomain.com"
+                    value={form.owner_email}
+                    onChange={(e) => {
+                      setVerificationSent(false);
+                      setVerificationMessage(null);
+                      setVerificationError(null);
+                      setForm((p) => ({ ...p, owner_email: e.target.value, verification_code: "" }));
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={sendVerificationCode}
+                    disabled={!form.owner_email || verificationSent}
+                  >
+                    {verificationSent ? "Code sent" : "Send verification code"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  We will send a one-time verification code to this email address.
+                </p>
+                {verificationMessage && (
+                  <p className="text-sm text-emerald-400">{verificationMessage}</p>
+                )}
+                {verificationError && (
+                  <p className="text-sm text-red-600">{verificationError}</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Verification code *</label>
+                <Input
+                  placeholder="Enter verification code"
+                  value={form.verification_code}
+                  onChange={f("verification_code")}
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Password *</label>

@@ -62,6 +62,12 @@ export function LoginPage() {
               {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
+          <div className="mt-6 text-center text-sm text-slate-500">
+            Don&apos;t have an account/company? Create one by setting up your business.
+          </div>
+          <div className="mt-3 flex justify-center">
+            <Button variant="outline" onClick={() => navigate("/setup")}>Sign up</Button>
+          </div>
         </CardContent>
       </Card>
     </div>

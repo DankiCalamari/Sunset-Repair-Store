@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,16 @@ from app.core.security import create_access_token, hash_password
 from app.db.session import get_db
 from app.models.business import Business, BusinessSettings, User
 from app.schemas.auth import AuthResponse, UserResponse
-from app.schemas.setup import SetupRequest, SetupStatusResponse
+from app.schemas.setup import (
+    SetupRequest,
+    SetupStatusResponse,
+    SetupVerificationRequest,
+    SetupVerificationResponse,
+)
+from app.services.setup_verification_service import (
+    send_setup_verification_code,
+    validate_setup_verification_code,
+)
 
 router = APIRouter(prefix="/setup", tags=["Setup"])
 
@@ -25,6 +34,13 @@ async def setup_status(db: AsyncSession = Depends(get_db)):
     return SetupStatusResponse(needs_setup=not exists)
 
 
+@router.post("/verification", response_model=SetupVerificationResponse, status_code=200)
+async def send_verification(body: SetupVerificationRequest, db: AsyncSession = Depends(get_db)):
+    """Generate and send a one-time setup verification code to the owner email."""
+    result = await send_setup_verification_code(db, body.owner_email)
+    return SetupVerificationResponse(**result)
+
+
 @router.post("", response_model=AuthResponse, status_code=201)
 async def run_setup(body: SetupRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -33,6 +49,14 @@ async def run_setup(body: SetupRequest, db: AsyncSession = Depends(get_db)):
     """
     if await _business_exists(db):
         raise conflict("Setup has already been completed", "SETUP_ALREADY_DONE")
+
+    if not body.verification_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"detail": "Verification code is required.", "code": "VERIFICATION_REQUIRED"},
+        )
+
+    await validate_setup_verification_code(db, body.owner_email, body.verification_code)
 
     # Slug uniqueness check (defensive — no businesses exist yet, but be explicit)
     slug_taken = await db.scalar(

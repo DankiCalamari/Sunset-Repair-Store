@@ -27,8 +27,8 @@ docker compose up -d
 docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/schema.sql
 
 # Bootstrap your first business and owner account
-# Edit database/seed.sql with your details, then run:
-docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
+# Complete setup through the web UI at:
+# http://localhost:5173/setup
 
 # API docs
 open http://localhost:8000/docs

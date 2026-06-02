@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.swp
+.pytest_cache/
+.venv/
+venv/
+*.env
+.env
+.git/
+Dockerfile
+docker-compose.yml
+frontend/
+database/
+docs/
+*.log

@@ -1,4 +1,15 @@
-const API_BASE = import.meta.env.VITE_API_URL || "";
+import type { User } from "@/types";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
+const buildUrl = (path: string) => {
+  const base = API_BASE.replace(/\/+$/g, "");
+  let normalizedPath = path;
+  if (base.endsWith("/api") && normalizedPath.startsWith("/api")) {
+    normalizedPath = normalizedPath.replace(/^\/api/, "");
+  }
+  return `${base}${normalizedPath}`;
+};
 
 export type ApiError = { detail: string; code?: string };
 
@@ -23,7 +34,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (token) headers.Authorization = `Bearer ${token}`;
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(buildUrl(path), { ...options, headers });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       const detail = err.detail;
@@ -44,6 +55,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export const setupApi = {
   status: () => api<{ needs_setup: boolean }>("/api/v1/setup/status"),
+  sendVerificationCode: (owner_email: string) =>
+    api<{ code_sent: boolean; debug_code?: string }>("/api/v1/setup/verification", {
+      method: "POST",
+      body: JSON.stringify({ owner_email }),
+    }),
   run: (data: {
     business_name: string;
     business_slug: string;
@@ -62,11 +78,12 @@ export const setupApi = {
     owner_name: string;
     owner_email: string;
     owner_password: string;
+    verification_code?: string;
   }) =>
     api<{
       access_token: string;
       refresh_token: string;
-      user: { id: string; email: string; full_name: string; role: string; permissions: string[] };
+      user: User;
     }>("/api/v1/setup", { method: "POST", body: JSON.stringify(data) }),
 };
 
