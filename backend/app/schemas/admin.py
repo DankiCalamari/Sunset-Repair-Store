@@ -75,6 +75,7 @@ class BusinessSettingsUpdate(BaseModel):
     imap: dict | None = None
     sms_gateway: dict | None = None
     automations: dict | None = None
+    branding: dict | None = None
 
 
 class SmtpTestRequest(BaseModel):

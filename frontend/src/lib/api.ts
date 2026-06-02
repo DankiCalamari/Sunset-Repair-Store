@@ -25,6 +25,30 @@ function getToken(): string | null {
   return localStorage.getItem("access_token");
 }
 
+export async function downloadFile(path: string, filename: string) {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(buildUrl(path), { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    const detail = err.detail;
+    if (typeof detail === "object" && detail?.detail) {
+      throw new Error(detail.detail);
+    }
+    throw new Error(typeof detail === "string" ? detail : "Download failed");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -214,6 +238,7 @@ export const quotesApi = {
       method: "POST",
       body: JSON.stringify({ reason }),
     }),
+  downloadPdf: (id: string, filename: string) => downloadFile(`/api/v1/quotes/${id}/pdf`, filename),
 };
 
 export const invoicesApi = {
@@ -237,6 +262,7 @@ export const invoicesApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  downloadPdf: (id: string, filename: string) => downloadFile(`/api/v1/invoices/${id}/pdf`, filename),
 };
 
 export const inventoryApi = {
@@ -477,8 +503,14 @@ export const adminApi = {
   updateSettings: (
     data: Partial<{
       business_name: string;
+      legal_name: string | null;
+      abn: string | null;
       email: string | null;
       phone: string;
+      address_line1: string | null;
+      city: string | null;
+      state: string | null;
+      postcode: string | null;
       tax_rate: number;
       ticket_prefix: string;
       next_ticket_seq: number;
@@ -486,6 +518,7 @@ export const adminApi = {
       imap: Record<string, unknown>;
       sms_gateway: Record<string, unknown>;
       automations: Record<string, unknown>;
+      branding: Record<string, unknown>;
     }>
   ) =>
     api<import("@/types/commerce").BusinessSettings>("/api/v1/admin/settings", {

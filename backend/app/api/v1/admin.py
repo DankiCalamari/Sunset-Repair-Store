@@ -172,6 +172,8 @@ async def update_settings(
         email_settings["automations"] = data["automations"] or {}
     if "sms_gateway" in data:
         sms_settings["gateway"] = data["sms_gateway"] or {}
+    if "branding" in data:
+        settings.branding_json = data["branding"] or {}
     settings.email_settings = dict(email_settings)
     settings.sms_settings = dict(sms_settings)
     await db.flush()

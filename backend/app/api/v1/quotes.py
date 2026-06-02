@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -25,8 +26,16 @@ from app.schemas.quote import (
 from app.services.document_service import (
     calculate_totals,
     generate_quote_number,
+    get_business_and_settings,
     get_tax_rate,
     get_ticket_or_404,
+)
+from app.services.pdf_service import (
+    DocumentLine,
+    QuotePdfContext,
+    branding_from_business,
+    load_logo_bytes,
+    render_quote_pdf,
 )
 from app.services.ticket_service import transition_status
 from app.services.communication_service import send_automation
@@ -140,6 +149,65 @@ async def get_quote(
     if not quote:
         raise not_found("Quote")
     return await _quote_response(db, quote)
+
+
+@router.get("/{quote_id}/pdf")
+async def download_quote_pdf(
+    quote_id: UUID,
+    business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.QUOTES_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Quotation)
+        .where(Quotation.id == quote_id, Quotation.business_id == business_id)
+        .options(selectinload(Quotation.lines))
+    )
+    quote = result.scalar_one_or_none()
+    if not quote:
+        raise not_found("Quote")
+
+    ticket = await db.get(RepairTicket, quote.ticket_id)
+    customer = await db.get(Customer, ticket.customer_id) if ticket else None
+    business, settings = await get_business_and_settings(db, business_id)
+    branding_data = (settings.branding_json if settings else {}) or {}
+    logo_bytes = await load_logo_bytes(branding_data if isinstance(branding_data, dict) else {})
+    branding = branding_from_business(business, settings, logo_bytes)
+    tax_rate = await get_tax_rate(db, business_id)
+
+    pdf_bytes = render_quote_pdf(
+        branding,
+        QuotePdfContext(
+            quote_number=quote.quote_number,
+            status=str(quote.status),
+            created_at=quote.created_at,
+            valid_until=quote.valid_until,
+            customer_name=customer.name if customer else "Customer",
+            customer_email=customer.email if customer else None,
+            customer_phone=customer.phone if customer else None,
+            ticket_number=ticket.ticket_number if ticket else None,
+            lines=[
+                DocumentLine(
+                    description=line.description,
+                    quantity=Decimal(str(line.quantity)),
+                    unit_price=Decimal(str(line.unit_price)),
+                    line_type=line.line_type,
+                )
+                for line in quote.lines
+            ],
+            subtotal=Decimal(str(quote.subtotal)),
+            tax_amount=Decimal(str(quote.tax_amount)),
+            discount_amount=Decimal(str(quote.discount_amount)),
+            total=Decimal(str(quote.total)),
+            tax_rate=tax_rate,
+        ),
+    )
+    filename = f"{quote.quote_number}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.patch("/{quote_id}", response_model=QuoteResponse)

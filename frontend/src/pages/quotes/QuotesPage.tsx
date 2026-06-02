@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, Plus, Send, X } from "lucide-react";
+import { Check, FileDown, Plus, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ export function QuotesPage() {
   const [lines, setLines] = useState([
     { line_type: "labour", description: "", quantity: 1, unit_price: 0 },
   ]);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -155,6 +156,22 @@ export function QuotesPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={downloadingPdf}
+                    onClick={async () => {
+                      setDownloadingPdf(true);
+                      try {
+                        await quotesApi.downloadPdf(selected.id, `${selected.quote_number}.pdf`);
+                      } finally {
+                        setDownloadingPdf(false);
+                      }
+                    }}
+                  >
+                    <FileDown className="mr-1 h-3 w-3" />
+                    {downloadingPdf ? "Generating..." : "Download PDF"}
+                  </Button>
                   {selected.status === "draft" && (
                     <Button size="sm" onClick={() => actionMutation.mutate({ action: "send", id: selected.id })}>
                       <Send className="mr-1 h-3 w-3" /> Send to customer

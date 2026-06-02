@@ -37,11 +37,22 @@ export function AdminPage() {
   });
   const [settingsForm, setSettingsForm] = useState({
     business_name: "",
+    legal_name: "",
+    abn: "",
     email: "",
     phone: "",
+    address_line1: "",
+    city: "",
+    state: "",
+    postcode: "",
     tax_rate: "0.1",
     ticket_prefix: "",
     next_ticket_seq: "1",
+    branding_logo_url: "",
+    branding_logo_data_url: "",
+    branding_primary_color: "#1e3a5f",
+    branding_accent_color: "#d97706",
+    branding_footer_text: "Thank you for your business.",
     smtp_host: "",
     smtp_port: "587",
     smtp_username: "",
@@ -94,11 +105,22 @@ export function AdminPage() {
     );
     setSettingsForm({
       business_name: settings.business_name,
+      legal_name: settings.legal_name || "",
+      abn: settings.abn || "",
       email: settings.email || "",
       phone: settings.phone || "",
+      address_line1: settings.address_line1 || "",
+      city: settings.city || "",
+      state: settings.state || "",
+      postcode: settings.postcode || "",
       tax_rate: String(settings.tax_rate),
       ticket_prefix: settings.ticket_prefix,
       next_ticket_seq: String(settings.next_ticket_seq),
+      branding_logo_url: String(settings.branding_json?.logo_url || ""),
+      branding_logo_data_url: String(settings.branding_json?.logo_data_url || ""),
+      branding_primary_color: String(settings.branding_json?.primary_color || "#1e3a5f"),
+      branding_accent_color: String(settings.branding_json?.accent_color || "#d97706"),
+      branding_footer_text: String(settings.branding_json?.footer_text || "Thank you for your business."),
       smtp_host: String(smtp.host || ""),
       smtp_port: String(smtp.port || "587"),
       smtp_username: String(smtp.username || ""),
@@ -174,11 +196,26 @@ export function AdminPage() {
     mutationFn: () =>
       adminApi.updateSettings({
         business_name: settingsForm.business_name,
+        legal_name: settingsForm.legal_name || null,
+        abn: settingsForm.abn || null,
         email: settingsForm.email || null,
         phone: settingsForm.phone,
+        address_line1: settingsForm.address_line1 || null,
+        city: settingsForm.city || null,
+        state: settingsForm.state || null,
+        postcode: settingsForm.postcode || null,
         tax_rate: parseFloat(settingsForm.tax_rate),
         ticket_prefix: settingsForm.ticket_prefix,
         next_ticket_seq: parseInt(settingsForm.next_ticket_seq, 10),
+        branding: {
+          logo_url: settingsForm.branding_logo_url || undefined,
+          ...(settingsForm.branding_logo_data_url
+            ? { logo_data_url: settingsForm.branding_logo_data_url }
+            : {}),
+          primary_color: settingsForm.branding_primary_color,
+          accent_color: settingsForm.branding_accent_color,
+          footer_text: settingsForm.branding_footer_text,
+        },
         smtp: {
           host: settingsForm.smtp_host,
           port: parseInt(settingsForm.smtp_port, 10),
@@ -329,6 +366,57 @@ export function AdminPage() {
                 onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
               />
             </label>
+            <label className="block text-sm font-medium">
+              Legal name
+              <Input
+                className="mt-1"
+                placeholder="Registered business name for invoices"
+                value={settingsForm.legal_name}
+                onChange={(e) => setSettingsForm({ ...settingsForm, legal_name: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              ABN
+              <Input
+                className="mt-1"
+                value={settingsForm.abn}
+                onChange={(e) => setSettingsForm({ ...settingsForm, abn: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Street address
+              <Input
+                className="mt-1"
+                value={settingsForm.address_line1}
+                onChange={(e) => setSettingsForm({ ...settingsForm, address_line1: e.target.value })}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="block text-sm font-medium">
+                City
+                <Input
+                  className="mt-1"
+                  value={settingsForm.city}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, city: e.target.value })}
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                State
+                <Input
+                  className="mt-1"
+                  value={settingsForm.state}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, state: e.target.value })}
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                Postcode
+                <Input
+                  className="mt-1"
+                  value={settingsForm.postcode}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, postcode: e.target.value })}
+                />
+              </label>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
                 GST rate
@@ -373,6 +461,102 @@ export function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Branding for PDFs</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-2">
+          <section className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Logo and colours appear on generated quote and invoice PDFs.
+            </p>
+            <label className="block text-sm font-medium">
+              Logo URL
+              <Input
+                className="mt-1"
+                placeholder="https://yoursite.com/logo.png"
+                value={settingsForm.branding_logo_url}
+                onChange={(e) => setSettingsForm({ ...settingsForm, branding_logo_url: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Or upload logo
+              <Input
+                className="mt-1"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      branding_logo_data_url: String(reader.result || ""),
+                    });
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+            {(settingsForm.branding_logo_data_url || settingsForm.branding_logo_url) && (
+              <img
+                src={settingsForm.branding_logo_data_url || settingsForm.branding_logo_url}
+                alt="Logo preview"
+                className="h-16 max-w-[220px] rounded border bg-white object-contain p-2"
+              />
+            )}
+          </section>
+          <section className="space-y-3">
+            <label className="block text-sm font-medium">
+              Primary colour
+              <div className="mt-1 flex gap-2">
+                <Input
+                  type="color"
+                  className="h-10 w-16 cursor-pointer p-1"
+                  value={settingsForm.branding_primary_color}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, branding_primary_color: e.target.value })}
+                />
+                <Input
+                  value={settingsForm.branding_primary_color}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, branding_primary_color: e.target.value })}
+                />
+              </div>
+            </label>
+            <label className="block text-sm font-medium">
+              Accent colour
+              <div className="mt-1 flex gap-2">
+                <Input
+                  type="color"
+                  className="h-10 w-16 cursor-pointer p-1"
+                  value={settingsForm.branding_accent_color}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, branding_accent_color: e.target.value })}
+                />
+                <Input
+                  value={settingsForm.branding_accent_color}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, branding_accent_color: e.target.value })}
+                />
+              </div>
+            </label>
+            <label className="block text-sm font-medium">
+              PDF footer text
+              <Input
+                className="mt-1"
+                value={settingsForm.branding_footer_text}
+                onChange={(e) => setSettingsForm({ ...settingsForm, branding_footer_text: e.target.value })}
+              />
+            </label>
+            <Button
+              variant="accent"
+              disabled={saveSettingsMutation.isPending}
+              onClick={() => saveSettingsMutation.mutate()}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save branding
+            </Button>
+          </section>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

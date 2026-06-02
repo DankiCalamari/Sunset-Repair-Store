@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,9 +28,17 @@ from app.schemas.invoice import (
 from app.services.document_service import (
     calculate_totals,
     generate_invoice_number,
+    get_business_and_settings,
     get_customer_or_404,
     get_tax_rate,
     get_ticket_or_404,
+)
+from app.services.pdf_service import (
+    DocumentLine,
+    InvoicePdfContext,
+    branding_from_business,
+    load_logo_bytes,
+    render_invoice_pdf,
 )
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
@@ -176,6 +185,74 @@ async def get_invoice(
     if not invoice:
         raise not_found("Invoice")
     return await _invoice_response(db, invoice)
+
+
+@router.get("/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: UUID,
+    business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.INVOICES_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.business_id == business_id)
+        .options(selectinload(Invoice.lines), selectinload(Invoice.payments))
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise not_found("Invoice")
+
+    customer = await db.get(Customer, invoice.customer_id)
+    ticket = await db.get(RepairTicket, invoice.ticket_id) if invoice.ticket_id else None
+    business, settings = await get_business_and_settings(db, business_id)
+    branding_data = (settings.branding_json if settings else {}) or {}
+    logo_bytes = await load_logo_bytes(branding_data if isinstance(branding_data, dict) else {})
+    branding = branding_from_business(business, settings, logo_bytes)
+    tax_rate = await get_tax_rate(db, business_id)
+
+    pdf_bytes = render_invoice_pdf(
+        branding,
+        InvoicePdfContext(
+            invoice_number=invoice.invoice_number,
+            status=invoice.status,
+            issued_at=invoice.issued_at,
+            created_at=invoice.created_at,
+            customer_name=customer.name if customer else "Customer",
+            customer_email=customer.email if customer else None,
+            customer_phone=customer.phone if customer else None,
+            ticket_number=ticket.ticket_number if ticket else None,
+            lines=[
+                DocumentLine(
+                    description=line.description,
+                    quantity=Decimal(str(line.quantity)),
+                    unit_price=Decimal(str(line.unit_price)),
+                )
+                for line in invoice.lines
+            ],
+            subtotal=Decimal(str(invoice.subtotal)),
+            tax_amount=Decimal(str(invoice.tax_amount)),
+            discount_amount=Decimal(str(invoice.discount_amount)),
+            total=Decimal(str(invoice.total)),
+            amount_paid=Decimal(str(invoice.amount_paid)),
+            tax_rate=tax_rate,
+            payments=[
+                {
+                    "paid_at": payment.paid_at,
+                    "method": payment.method,
+                    "reference": payment.reference,
+                    "amount": payment.amount,
+                }
+                for payment in invoice.payments
+            ],
+        ),
+    )
+    filename = f"{invoice.invoice_number}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{invoice_id}/payments", response_model=InvoiceResponse)

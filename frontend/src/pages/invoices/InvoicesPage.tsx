@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { CreditCard, Plus } from "lucide-react";
+import { CreditCard, FileDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ export function InvoicesPage() {
   const [customerId, setCustomerId] = useState("");
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("card");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -190,11 +191,29 @@ export function InvoicesPage() {
                     </ul>
                   </section>
                 )}
-                {balance > 0 && selected.status !== "paid" && (
-                  <Button size="sm" variant="accent" onClick={() => { setPayAmount(balance.toFixed(2)); setShowPay(true); }}>
-                    <CreditCard className="mr-1 h-3 w-3" /> Record payment
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={downloadingPdf}
+                    onClick={async () => {
+                      setDownloadingPdf(true);
+                      try {
+                        await invoicesApi.downloadPdf(selected.id, `${selected.invoice_number}.pdf`);
+                      } finally {
+                        setDownloadingPdf(false);
+                      }
+                    }}
+                  >
+                    <FileDown className="mr-1 h-3 w-3" />
+                    {downloadingPdf ? "Generating..." : "Download PDF"}
                   </Button>
-                )}
+                  {balance > 0 && selected.status !== "paid" && (
+                    <Button size="sm" variant="accent" onClick={() => { setPayAmount(balance.toFixed(2)); setShowPay(true); }}>
+                      <CreditCard className="mr-1 h-3 w-3" /> Record payment
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </>
           ) : (

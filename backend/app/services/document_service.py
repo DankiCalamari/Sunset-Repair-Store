@@ -81,3 +81,15 @@ async def get_customer_or_404(db: AsyncSession, customer_id: UUID, business_id: 
     if not customer:
         raise not_found("Customer")
     return customer
+
+
+async def get_business_and_settings(
+    db: AsyncSession, business_id: UUID
+) -> tuple["Business", BusinessSettings | None]:
+    from app.models.business import Business
+
+    business = await db.get(Business, business_id)
+    if not business:
+        raise not_found("Business")
+    settings = await db.scalar(select(BusinessSettings).where(BusinessSettings.business_id == business_id))
+    return business, settings
