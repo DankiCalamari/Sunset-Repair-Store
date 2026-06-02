@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, MessageSquare, Paperclip, Plus, RefreshCw, Send } from "lucide-react";
+import { Mail, MessageSquare, Paperclip, Plus, RefreshCw, Send, StickyNote } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,8 @@ async function filesToAttachments(files: FileList | null) {
 
 export function TicketsPage() {
   const [selected, setSelected] = useState<RepairTicket | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "communications">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "notes" | "communications">("details");
+  const [internalNoteDraft, setInternalNoteDraft] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailHtml, setEmailHtml] = useState("");
   const [emailFiles, setEmailFiles] = useState<FileList | null>(null);
@@ -93,6 +94,10 @@ export function TicketsPage() {
     if (!selected && data?.items.length) setSelected(data.items[0]);
   }, [data, selected]);
 
+  useEffect(() => {
+    setInternalNoteDraft("");
+  }, [selected?.id]);
+
   const { data: timeline } = useQuery({
     queryKey: ["ticket-timeline", selected?.id],
     queryFn: () => ticketsApi.timeline(selected!.id),
@@ -102,6 +107,12 @@ export function TicketsPage() {
   const { data: communications, isLoading: communicationsLoading } = useQuery({
     queryKey: ["ticket-communications", selected?.id],
     queryFn: () => ticketsApi.communications(selected!.id),
+    enabled: !!selected,
+  });
+
+  const { data: internalNotes, isLoading: notesLoading } = useQuery({
+    queryKey: ["ticket-notes", selected?.id],
+    queryFn: () => ticketsApi.notes(selected!.id),
     enabled: !!selected,
   });
 
@@ -133,6 +144,14 @@ export function TicketsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ticket-communications", selected?.id] });
       setSmsMessage("");
+    },
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: () => ticketsApi.addNote(selected!.id, internalNoteDraft.trim()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket-notes", selected?.id] });
+      setInternalNoteDraft("");
     },
   });
 
@@ -286,6 +305,9 @@ export function TicketsPage() {
                   <Button size="sm" variant={activeTab === "details" ? "default" : "outline"} onClick={() => setActiveTab("details")}>
                     Details
                   </Button>
+                  <Button size="sm" variant={activeTab === "notes" ? "default" : "outline"} onClick={() => setActiveTab("notes")}>
+                    Internal notes
+                  </Button>
                   <Button
                     size="sm"
                     variant={activeTab === "communications" ? "default" : "outline"}
@@ -309,6 +331,66 @@ export function TicketsPage() {
                     <div className="sm:col-span-2">
                       <p className="text-muted-foreground">Diagnostic notes</p>
                       <p className="font-medium">{selected.diagnostic_notes || "No diagnostic notes yet."}</p>
+                    </div>
+                  </div>
+                ) : activeTab === "notes" ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold">Internal notes</h3>
+                        <p className="text-sm text-muted-foreground">Visible to staff only. Not shown to customers.</p>
+                      </div>
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
+                        Staff only
+                      </span>
+                    </div>
+
+                    {notesLoading && <p className="text-sm text-muted-foreground">Loading notes...</p>}
+                    {!notesLoading && internalNotes?.length === 0 && (
+                      <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                        No internal notes yet. Add findings, parts used, or handover details for other technicians.
+                      </p>
+                    )}
+                    {internalNotes?.map((note) => (
+                      <div key={note.id} className="rounded-md border bg-muted/20 p-4">
+                        <div className="flex items-start gap-3">
+                          <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">{note.author_name}</span>
+                              <span>·</span>
+                              <span>{formatWhen(note.created_at)}</span>
+                            </div>
+                            <p className="mt-2 whitespace-pre-wrap text-sm">{note.body}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="space-y-3 border-t pt-4">
+                      <label className="block text-sm font-medium">Add note</label>
+                      <textarea
+                        className="min-h-28 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                        placeholder="e.g. Replaced charging port, tested OK. Customer notified by phone."
+                        value={internalNoteDraft}
+                        onChange={(e) => setInternalNoteDraft(e.target.value)}
+                      />
+                      <div className="flex items-center justify-between gap-3">
+                        {addNoteMutation.isError && (
+                          <p className="text-sm text-red-700">
+                            {addNoteMutation.error instanceof Error ? addNoteMutation.error.message : "Failed to add note"}
+                          </p>
+                        )}
+                        <Button
+                          className="ml-auto"
+                          variant="accent"
+                          disabled={!internalNoteDraft.trim() || addNoteMutation.isPending}
+                          onClick={() => addNoteMutation.mutate()}
+                        >
+                          <StickyNote className="mr-2 h-4 w-4" />
+                          {addNoteMutation.isPending ? "Saving..." : "Add note"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (

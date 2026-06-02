@@ -75,3 +75,22 @@ class BusinessSettingsUpdate(BaseModel):
     imap: dict | None = None
     sms_gateway: dict | None = None
     automations: dict | None = None
+
+
+class SmtpTestRequest(BaseModel):
+    to: EmailStr | None = None
+    smtp: dict | None = None
+
+
+class SmtpTestResponse(BaseModel):
+    ok: bool
+    message: str
+
+
+class ImapTestRequest(BaseModel):
+    imap: dict | None = None
+
+
+class ImapTestResponse(BaseModel):
+    ok: bool
+    message: str

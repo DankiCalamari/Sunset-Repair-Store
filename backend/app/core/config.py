@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_from: str | None = None
     smtp_tls: bool = True
+    smtp_use_ssl: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:

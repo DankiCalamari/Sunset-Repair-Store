@@ -1,11 +1,13 @@
 from uuid import UUID
 
+import asyncio
 from fastapi import APIRouter, Depends
+from email.message import EmailMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_business_id, require_permission
-from app.core.exceptions import conflict, not_found
+from app.core.exceptions import bad_request, conflict, not_found
 from app.core.permissions import Permission
 from app.core.security import hash_password
 from app.db.session import get_db
@@ -16,7 +18,13 @@ from app.schemas.admin import (
     AdminUserUpdate,
     BusinessSettingsResponse,
     BusinessSettingsUpdate,
+    SmtpTestRequest,
+    SmtpTestResponse,
+    ImapTestRequest,
+    ImapTestResponse,
 )
+from app.services.smtp_service import resolve_smtp_security, security_mode_label, send_email_message
+from app.services.imap_service import test_imap_connection
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -168,3 +176,65 @@ async def update_settings(
     settings.sms_settings = dict(sms_settings)
     await db.flush()
     return await _settings_response(db, business_id)
+
+
+@router.post("/settings/test-smtp", response_model=SmtpTestResponse)
+async def test_smtp_settings(
+    body: SmtpTestRequest,
+    user: CurrentUser = Depends(require_permission(Permission.ADMIN_SETTINGS)),
+    business_id: UUID = Depends(get_business_id),
+    db: AsyncSession = Depends(get_db),
+):
+    business = await db.get(Business, business_id)
+    if not business:
+        raise not_found("Business")
+
+    settings = await db.scalar(select(BusinessSettings).where(BusinessSettings.business_id == business_id))
+    saved_smtp = (settings.email_settings or {}).get("smtp", {}) if settings else {}
+    smtp_config = {**saved_smtp, **(body.smtp or {})}
+    if not smtp_config.get("host"):
+        raise bad_request("SMTP host is required", "SMTP_NOT_CONFIGURED")
+
+    recipient = body.to or user.email or business.email
+    if not recipient:
+        raise bad_request("No test recipient email is available", "SMTP_TEST_RECIPIENT_MISSING")
+
+    sender = smtp_config.get("from_email") or smtp_config.get("username") or recipient
+    security = resolve_smtp_security(smtp_config)
+    msg = EmailMessage()
+    msg["From"] = sender
+    msg["To"] = recipient
+    msg["Subject"] = f"SMTP test from {business.name}"
+    msg.set_content(
+        f"This is a test email from {business.name}.\n"
+        f"Server: {smtp_config.get('host')}:{smtp_config.get('port', 587)}\n"
+        f"Security: {security_mode_label(security)}"
+    )
+
+    try:
+        send_email_message(smtp_config, msg)
+    except RuntimeError as exc:
+        raise bad_request(str(exc), "SMTP_TEST_FAILED") from exc
+
+    return SmtpTestResponse(ok=True, message=f"Test email sent to {recipient}")
+
+
+@router.post("/settings/test-imap", response_model=ImapTestResponse)
+async def test_imap_settings(
+    body: ImapTestRequest,
+    business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.ADMIN_SETTINGS)),
+    db: AsyncSession = Depends(get_db),
+):
+    settings = await db.scalar(select(BusinessSettings).where(BusinessSettings.business_id == business_id))
+    saved_imap = (settings.email_settings or {}).get("imap", {}) if settings else {}
+    imap_config = {**saved_imap, **(body.imap or {})}
+    if not imap_config.get("host"):
+        raise bad_request("IMAP host is required", "IMAP_NOT_CONFIGURED")
+
+    try:
+        message = await asyncio.to_thread(test_imap_connection, imap_config)
+    except RuntimeError as exc:
+        raise bad_request(str(exc), "IMAP_TEST_FAILED") from exc
+
+    return ImapTestResponse(ok=True, message=message)

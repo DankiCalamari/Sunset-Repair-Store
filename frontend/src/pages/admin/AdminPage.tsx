@@ -47,14 +47,14 @@ export function AdminPage() {
     smtp_username: "",
     smtp_password: "",
     smtp_from_email: "",
-    smtp_tls_enabled: true,
+    smtp_security: "starttls" as "starttls" | "ssl" | "none",
     imap_enabled: false,
     imap_host: "",
     imap_port: "993",
     imap_username: "",
     imap_password: "",
     imap_mailbox: "INBOX",
-    imap_ssl_enabled: true,
+    imap_security: "ssl" as "starttls" | "ssl" | "none",
     sms_api_url: "",
     sms_api_key: "",
     sms_webhook_public_key: "",
@@ -104,14 +104,26 @@ export function AdminPage() {
       smtp_username: String(smtp.username || ""),
       smtp_password: String(smtp.password || ""),
       smtp_from_email: String(smtp.from_email || ""),
-      smtp_tls_enabled: smtp.tls_enabled !== false,
+      smtp_security:
+        smtp.security === "ssl" || smtp.security === "none" || smtp.security === "starttls"
+          ? (smtp.security as "starttls" | "ssl" | "none")
+          : Number(smtp.port) === 465
+            ? "ssl"
+            : "starttls",
       imap_enabled: Boolean(imap.enabled),
       imap_host: String(imap.host || ""),
       imap_port: String(imap.port || "993"),
       imap_username: String(imap.username || ""),
       imap_password: String(imap.password || ""),
       imap_mailbox: String(imap.mailbox || "INBOX"),
-      imap_ssl_enabled: imap.ssl_enabled !== false,
+      imap_security:
+        imap.security === "ssl" || imap.security === "none" || imap.security === "starttls"
+          ? (imap.security as "starttls" | "ssl" | "none")
+          : imap.ssl_enabled === false && Number(imap.port) === 143
+            ? "starttls"
+            : Number(imap.port) === 143
+              ? "starttls"
+              : "ssl",
       sms_api_url: String(gateway.api_url || ""),
       sms_api_key: String(gateway.api_key || ""),
       sms_webhook_public_key: String(gateway.webhook_public_key || ""),
@@ -173,7 +185,9 @@ export function AdminPage() {
           username: settingsForm.smtp_username,
           password: settingsForm.smtp_password,
           from_email: settingsForm.smtp_from_email,
-          tls_enabled: settingsForm.smtp_tls_enabled,
+          security: settingsForm.smtp_security,
+          tls_enabled: settingsForm.smtp_security === "starttls",
+          ssl_enabled: settingsForm.smtp_security === "ssl",
         },
         imap: {
           enabled: settingsForm.imap_enabled,
@@ -182,7 +196,9 @@ export function AdminPage() {
           username: settingsForm.imap_username,
           password: settingsForm.imap_password,
           mailbox: settingsForm.imap_mailbox,
-          ssl_enabled: settingsForm.imap_ssl_enabled,
+          security: settingsForm.imap_security,
+          ssl_enabled: settingsForm.imap_security === "ssl",
+          tls_enabled: settingsForm.imap_security === "starttls",
         },
         sms_gateway: {
           api_url: settingsForm.sms_api_url,
@@ -193,6 +209,39 @@ export function AdminPage() {
         automations: settingsForm.automations,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
+  });
+
+  const testSmtpMutation = useMutation({
+    mutationFn: () =>
+      adminApi.testSmtp({
+        to: settingsForm.email || undefined,
+        smtp: {
+          host: settingsForm.smtp_host,
+          port: parseInt(settingsForm.smtp_port, 10),
+          username: settingsForm.smtp_username,
+          password: settingsForm.smtp_password,
+          from_email: settingsForm.smtp_from_email,
+          security: settingsForm.smtp_security,
+          tls_enabled: settingsForm.smtp_security === "starttls",
+          ssl_enabled: settingsForm.smtp_security === "ssl",
+        },
+      }),
+  });
+
+  const testImapMutation = useMutation({
+    mutationFn: () =>
+      adminApi.testImap({
+        imap: {
+          host: settingsForm.imap_host,
+          port: parseInt(settingsForm.imap_port, 10),
+          username: settingsForm.imap_username,
+          password: settingsForm.imap_password,
+          mailbox: settingsForm.imap_mailbox,
+          security: settingsForm.imap_security,
+          ssl_enabled: settingsForm.imap_security === "ssl",
+          tls_enabled: settingsForm.imap_security === "starttls",
+        },
+      }),
   });
 
   return (
@@ -337,10 +386,42 @@ export function AdminPage() {
             <Input placeholder="SMTP username" value={settingsForm.smtp_username} onChange={(e) => setSettingsForm({ ...settingsForm, smtp_username: e.target.value })} />
             <Input type="password" placeholder="SMTP password" value={settingsForm.smtp_password} onChange={(e) => setSettingsForm({ ...settingsForm, smtp_password: e.target.value })} />
             <Input type="email" placeholder="From email" value={settingsForm.smtp_from_email} onChange={(e) => setSettingsForm({ ...settingsForm, smtp_from_email: e.target.value })} />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={settingsForm.smtp_tls_enabled} onChange={(e) => setSettingsForm({ ...settingsForm, smtp_tls_enabled: e.target.checked })} />
-              TLS enabled
+            <label className="block text-sm font-medium">
+              Security
+              <select
+                className="mt-1 flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
+                value={settingsForm.smtp_security}
+                onChange={(e) =>
+                  setSettingsForm({
+                    ...settingsForm,
+                    smtp_security: e.target.value as "starttls" | "ssl" | "none",
+                    smtp_port: e.target.value === "ssl" ? "465" : e.target.value === "starttls" ? "587" : settingsForm.smtp_port,
+                  })
+                }
+              >
+                <option value="starttls">STARTTLS (port 587)</option>
+                <option value="ssl">SSL/TLS (port 465)</option>
+                <option value="none">None (port 25)</option>
+              </select>
             </label>
+            <p className="text-xs text-muted-foreground">
+              Use STARTTLS for Microsoft 365 and Gmail. Use SSL/TLS if your provider requires port 465.
+            </p>
+            <Button
+              variant="accent"
+              disabled={!settingsForm.smtp_host || testSmtpMutation.isPending}
+              onClick={() => testSmtpMutation.mutate()}
+            >
+              {testSmtpMutation.isPending ? "Testing..." : "Test SMTP"}
+            </Button>
+            {testSmtpMutation.isSuccess && (
+              <p className="text-sm text-green-700">{testSmtpMutation.data.message}</p>
+            )}
+            {testSmtpMutation.isError && (
+              <p className="text-sm text-red-700">
+                {testSmtpMutation.error instanceof Error ? testSmtpMutation.error.message : "SMTP test failed"}
+              </p>
+            )}
           </section>
 
           <section className="space-y-3">
@@ -354,10 +435,42 @@ export function AdminPage() {
             <Input placeholder="IMAP username" value={settingsForm.imap_username} onChange={(e) => setSettingsForm({ ...settingsForm, imap_username: e.target.value })} />
             <Input type="password" placeholder="IMAP password" value={settingsForm.imap_password} onChange={(e) => setSettingsForm({ ...settingsForm, imap_password: e.target.value })} />
             <Input placeholder="Mailbox" value={settingsForm.imap_mailbox} onChange={(e) => setSettingsForm({ ...settingsForm, imap_mailbox: e.target.value })} />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={settingsForm.imap_ssl_enabled} onChange={(e) => setSettingsForm({ ...settingsForm, imap_ssl_enabled: e.target.checked })} />
-              SSL enabled
+            <label className="block text-sm font-medium">
+              Security
+              <select
+                className="mt-1 flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
+                value={settingsForm.imap_security}
+                onChange={(e) =>
+                  setSettingsForm({
+                    ...settingsForm,
+                    imap_security: e.target.value as "starttls" | "ssl" | "none",
+                    imap_port: e.target.value === "ssl" ? "993" : e.target.value === "starttls" ? "143" : settingsForm.imap_port,
+                  })
+                }
+              >
+                <option value="ssl">SSL/TLS (port 993)</option>
+                <option value="starttls">STARTTLS (port 143)</option>
+                <option value="none">None (port 143)</option>
+              </select>
             </label>
+            <p className="text-xs text-muted-foreground">
+              Use SSL/TLS for Microsoft 365 and Gmail. Use STARTTLS if your provider requires port 143.
+            </p>
+            <Button
+              variant="accent"
+              disabled={!settingsForm.imap_host || !settingsForm.imap_username || testImapMutation.isPending}
+              onClick={() => testImapMutation.mutate()}
+            >
+              {testImapMutation.isPending ? "Testing..." : "Test IMAP"}
+            </Button>
+            {testImapMutation.isSuccess && (
+              <p className="text-sm text-green-700">{testImapMutation.data.message}</p>
+            )}
+            {testImapMutation.isError && (
+              <p className="text-sm text-red-700">
+                {testImapMutation.error instanceof Error ? testImapMutation.error.message : "IMAP test failed"}
+              </p>
+            )}
           </section>
 
           <section className="space-y-3">

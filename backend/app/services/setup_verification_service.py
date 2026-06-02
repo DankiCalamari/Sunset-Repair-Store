@@ -1,6 +1,5 @@
 import logging
 import secrets
-import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Any
@@ -10,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.services.smtp_service import send_email_message
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -29,6 +29,7 @@ def _smtp_config() -> dict[str, Any]:
         "password": settings.smtp_password,
         "from_email": from_email,
         "tls_enabled": settings.smtp_tls,
+        "ssl_enabled": settings.smtp_use_ssl,
     }
 
 
@@ -49,12 +50,7 @@ def _send_email(recipient: str, subject: str, body_html: str, body_text: str) ->
     msg.set_content(body_text)
     msg.add_alternative(body_html, subtype="html")
 
-    with smtplib.SMTP(host, config["port"], timeout=20) as smtp:
-        if config["tls_enabled"]:
-            smtp.starttls()
-        if config["username"]:
-            smtp.login(config["username"], config.get("password") or "")
-        smtp.send_message(msg)
+    send_email_message(config, msg)
 
 
 async def ensure_setup_schema(db: AsyncSession) -> None:

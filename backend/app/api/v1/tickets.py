@@ -8,11 +8,14 @@ from app.api.deps import CurrentUser, get_business_id, require_permission
 from app.core.exceptions import not_found
 from app.core.permissions import Permission
 from app.db.session import get_db
-from app.models.ticket import RepairTicket, TicketTimeline
+from app.models.ticket import RepairTicket, TicketInternalNote, TicketTimeline
 from app.models.customer import Customer
+from app.models.business import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.communications import CommunicationResponse, TicketEmailSend, TicketSmsSend
 from app.schemas.ticket import (
+    InternalNoteCreate,
+    InternalNoteResponse,
     TicketCreate,
     TicketResponse,
     TicketStatusUpdate,
@@ -170,6 +173,68 @@ async def get_timeline(
         .order_by(TicketTimeline.created_at)
     )
     return [TimelineEntry.model_validate(e) for e in result.scalars().all()]
+
+
+@router.get("/{ticket_id}/notes", response_model=list[InternalNoteResponse])
+async def list_internal_notes(
+    ticket_id: UUID,
+    business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.TICKETS_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    ticket_check = await db.execute(
+        select(RepairTicket.id).where(RepairTicket.id == ticket_id, RepairTicket.business_id == business_id)
+    )
+    if not ticket_check.scalar_one_or_none():
+        raise not_found("Ticket")
+    result = await db.execute(
+        select(TicketInternalNote, User.full_name)
+        .join(User, User.id == TicketInternalNote.author_id)
+        .where(TicketInternalNote.ticket_id == ticket_id)
+        .order_by(TicketInternalNote.created_at)
+    )
+    return [
+        InternalNoteResponse(
+            id=note.id,
+            ticket_id=note.ticket_id,
+            author_id=note.author_id,
+            author_name=author_name,
+            body=note.body,
+            created_at=note.created_at,
+        )
+        for note, author_name in result.all()
+    ]
+
+
+@router.post("/{ticket_id}/notes", response_model=InternalNoteResponse, status_code=201)
+async def create_internal_note(
+    ticket_id: UUID,
+    body: InternalNoteCreate,
+    user: CurrentUser = Depends(require_permission(Permission.TICKETS_WRITE)),
+    business_id: UUID = Depends(get_business_id),
+    db: AsyncSession = Depends(get_db),
+):
+    ticket = await db.scalar(
+        select(RepairTicket).where(RepairTicket.id == ticket_id, RepairTicket.business_id == business_id)
+    )
+    if not ticket:
+        raise not_found("Ticket")
+    note = TicketInternalNote(
+        ticket_id=ticket.id,
+        author_id=user.id,
+        body=body.body.strip(),
+    )
+    db.add(note)
+    await db.flush()
+    await db.refresh(note)
+    return InternalNoteResponse(
+        id=note.id,
+        ticket_id=note.ticket_id,
+        author_id=note.author_id,
+        author_name=user.full_name,
+        body=note.body,
+        created_at=note.created_at,
+    )
 
 
 @router.get("/{ticket_id}/communications", response_model=list[CommunicationResponse])

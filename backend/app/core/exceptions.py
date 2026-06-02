@@ -16,3 +16,7 @@ def forbidden(message: str = "Permission denied") -> AppException:
 
 def conflict(message: str, code: str = "CONFLICT") -> AppException:
     return AppException(status.HTTP_409_CONFLICT, message, code)
+
+
+def bad_request(message: str, code: str = "BAD_REQUEST") -> AppException:
+    return AppException(status.HTTP_400_BAD_REQUEST, message, code)

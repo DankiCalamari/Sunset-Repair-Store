@@ -156,6 +156,13 @@ export const ticketsApi = {
     }),
   timeline: (id: string) =>
     api<import("@/types/commerce").TimelineEntry[]>(`/api/v1/tickets/${id}/timeline`),
+  notes: (id: string) =>
+    api<import("@/types/commerce").TicketInternalNote[]>(`/api/v1/tickets/${id}/notes`),
+  addNote: (id: string, body: string) =>
+    api<import("@/types/commerce").TicketInternalNote>(`/api/v1/tickets/${id}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
   communications: (id: string) =>
     api<import("@/types/commerce").TicketCommunication[]>(`/api/v1/tickets/${id}/communications`),
   template: (id: string, eventKey: string) =>
@@ -483,6 +490,16 @@ export const adminApi = {
   ) =>
     api<import("@/types/commerce").BusinessSettings>("/api/v1/admin/settings", {
       method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  testSmtp: (data: { to?: string; smtp?: Record<string, unknown> }) =>
+    api<{ ok: boolean; message: string }>("/api/v1/admin/settings/test-smtp", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  testImap: (data: { imap?: Record<string, unknown> }) =>
+    api<{ ok: boolean; message: string }>("/api/v1/admin/settings/test-imap", {
+      method: "POST",
       body: JSON.stringify(data),
     }),
 };

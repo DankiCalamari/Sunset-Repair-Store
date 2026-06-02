@@ -1,9 +1,9 @@
 import asyncio
 import base64
-import imaplib
 import json
 import re
-import smtplib
+from app.services.smtp_service import send_email_message
+from app.services.imap_service import open_imap_connection
 from datetime import datetime, timezone
 from email import policy
 from email.message import EmailMessage
@@ -202,12 +202,7 @@ def _send_smtp_sync(config: dict[str, Any], sender: str, recipient: str, subject
     port = int(config.get("port") or 587)
     if not host:
         raise RuntimeError("SMTP host is not configured")
-    with smtplib.SMTP(host, port, timeout=20) as smtp:
-        if config.get("tls_enabled", True):
-            smtp.starttls()
-        if config.get("username"):
-            smtp.login(config["username"], config.get("password") or "")
-        smtp.send_message(msg)
+    send_email_message(config, msg)
     return msg.get("Message-ID") or ""
 
 
@@ -538,14 +533,12 @@ def parse_email_message(raw: bytes) -> dict[str, Any]:
 
 
 def _fetch_unread_imap(config: dict[str, Any]) -> list[dict[str, Any]]:
-    host = config.get("host")
     username = config.get("username")
     password = config.get("password")
-    if not host or not username or not password:
+    if not config.get("host") or not username or not password:
         return []
-    port = int(config.get("port") or 993)
     mailbox = config.get("mailbox") or "INBOX"
-    conn = imaplib.IMAP4_SSL(host, port) if config.get("ssl_enabled", True) else imaplib.IMAP4(host, port)
+    conn = open_imap_connection(config)
     try:
         conn.login(username, password)
         conn.select(mailbox)

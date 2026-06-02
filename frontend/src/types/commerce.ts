@@ -105,6 +105,15 @@ export interface TimelineEntry {
   created_at: string;
 }
 
+export interface TicketInternalNote {
+  id: string;
+  ticket_id: string;
+  author_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+}
+
 export interface TicketCommunication {
   id: string;
   ticket_id: string;

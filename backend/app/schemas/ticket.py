@@ -80,6 +80,19 @@ class TimelineEntry(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InternalNoteCreate(BaseModel):
+    body: str = Field(min_length=1)
+
+
+class InternalNoteResponse(BaseModel):
+    id: UUID
+    ticket_id: UUID
+    author_id: UUID
+    author_name: str
+    body: str
+    created_at: datetime
+
+
 class TrackerStep(BaseModel):
     key: str
     label: str
