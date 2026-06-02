@@ -22,4 +22,4 @@ COPY app ./app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "if [ \"$APP_ENV\" = \"development\" ]; then uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload; else gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:8000 backend.app.main:app; fi"]
+CMD ["sh", "-c", "if [ \"$APP_ENV\" = \"development\" ]; then uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload; else gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:8000 app.main:app; fi"]
