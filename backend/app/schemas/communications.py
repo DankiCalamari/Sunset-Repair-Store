@@ -62,7 +62,8 @@ class UnassignedMessageResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class TelnyxInboundSms(BaseModel):
+class InboundSms(BaseModel):
+    """Generic inbound SMS payload supporting common webhook formats."""
     data: dict | None = None
     from_: str | None = Field(default=None, alias="from")
     to: str | None = None

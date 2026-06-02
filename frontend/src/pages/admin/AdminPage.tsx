@@ -55,9 +55,10 @@ export function AdminPage() {
     imap_password: "",
     imap_mailbox: "INBOX",
     imap_ssl_enabled: true,
-    telnyx_api_key: "",
-    telnyx_public_key: "",
-    telnyx_sending_number: "",
+    sms_api_url: "",
+    sms_api_key: "",
+    sms_webhook_public_key: "",
+    sms_sending_number: "",
     automations: {} as Record<string, { email: boolean; sms: boolean }>,
   });
   const qc = useQueryClient();
@@ -78,10 +79,10 @@ export function AdminPage() {
       imap?: Record<string, unknown>;
       automations?: Record<string, { email?: boolean; sms?: boolean }>;
     };
-    const smsSettings = settings.sms_settings as { telnyx?: Record<string, unknown> };
+    const smsSettings = settings.sms_settings as { gateway?: Record<string, unknown> };
     const smtp = emailSettings.smtp || {};
     const imap = emailSettings.imap || {};
-    const telnyx = smsSettings.telnyx || {};
+    const gateway = smsSettings.gateway || {};
     const automations = Object.fromEntries(
       automationEvents.map(([key]) => [
         key,
@@ -111,9 +112,10 @@ export function AdminPage() {
       imap_password: String(imap.password || ""),
       imap_mailbox: String(imap.mailbox || "INBOX"),
       imap_ssl_enabled: imap.ssl_enabled !== false,
-      telnyx_api_key: String(telnyx.api_key || ""),
-      telnyx_public_key: String(telnyx.public_key || ""),
-      telnyx_sending_number: String(telnyx.sending_number || ""),
+      sms_api_url: String(gateway.api_url || ""),
+      sms_api_key: String(gateway.api_key || ""),
+      sms_webhook_public_key: String(gateway.webhook_public_key || ""),
+      sms_sending_number: String(gateway.sending_number || ""),
       automations,
     });
   }, [settings]);
@@ -182,10 +184,11 @@ export function AdminPage() {
           mailbox: settingsForm.imap_mailbox,
           ssl_enabled: settingsForm.imap_ssl_enabled,
         },
-        telnyx: {
-          api_key: settingsForm.telnyx_api_key,
-          public_key: settingsForm.telnyx_public_key,
-          sending_number: settingsForm.telnyx_sending_number,
+        sms_gateway: {
+          api_url: settingsForm.sms_api_url,
+          api_key: settingsForm.sms_api_key,
+          webhook_public_key: settingsForm.sms_webhook_public_key,
+          sending_number: settingsForm.sms_sending_number,
         },
         automations: settingsForm.automations,
       }),
@@ -358,11 +361,12 @@ export function AdminPage() {
           </section>
 
           <section className="space-y-3">
-            <h3 className="font-semibold">Telnyx SMS</h3>
-            <Input type="password" placeholder="Telnyx API key" value={settingsForm.telnyx_api_key} onChange={(e) => setSettingsForm({ ...settingsForm, telnyx_api_key: e.target.value })} />
-            <Input placeholder="Telnyx public key (webhook verification)" value={settingsForm.telnyx_public_key} onChange={(e) => setSettingsForm({ ...settingsForm, telnyx_public_key: e.target.value })} />
-            <Input placeholder="Sending number" value={settingsForm.telnyx_sending_number} onChange={(e) => setSettingsForm({ ...settingsForm, telnyx_sending_number: e.target.value })} />
-            <p className="text-xs text-muted-foreground">Inbound SMS webhook: /api/v1/webhooks/telnyx/inbound-sms</p>
+            <h3 className="font-semibold">SMS Gateway</h3>
+            <Input placeholder="API URL (e.g. https://api.provider.com/sms)" value={settingsForm.sms_api_url} onChange={(e) => setSettingsForm({ ...settingsForm, sms_api_url: e.target.value })} />
+            <Input type="password" placeholder="API key" value={settingsForm.sms_api_key} onChange={(e) => setSettingsForm({ ...settingsForm, sms_api_key: e.target.value })} />
+            <Input placeholder="Webhook public key (for signature verification)" value={settingsForm.sms_webhook_public_key} onChange={(e) => setSettingsForm({ ...settingsForm, sms_webhook_public_key: e.target.value })} />
+            <Input placeholder="Sending number" value={settingsForm.sms_sending_number} onChange={(e) => setSettingsForm({ ...settingsForm, sms_sending_number: e.target.value })} />
+            <p className="text-xs text-muted-foreground">Inbound SMS webhook: /api/v1/webhooks/sms/inbound</p>
           </section>
         </CardContent>
       </Card>

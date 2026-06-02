@@ -73,5 +73,5 @@ class BusinessSettingsUpdate(BaseModel):
     next_ticket_seq: int | None = Field(default=None, ge=1)
     smtp: dict | None = None
     imap: dict | None = None
-    telnyx: dict | None = None
+    sms_gateway: dict | None = None
     automations: dict | None = None

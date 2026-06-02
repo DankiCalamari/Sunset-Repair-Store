@@ -12,10 +12,10 @@ from app.core.permissions import Permission
 from app.db.session import get_db
 from app.models.business import BusinessSettings
 from app.models.ticket import UnassignedMessage
-from app.schemas.communications import TelnyxInboundSms, UnassignedMessageResponse
+from app.schemas.communications import InboundSms, UnassignedMessageResponse
 from app.services.communication_service import (
     store_inbound_message,
-    verify_telnyx_webhook,
+    verify_sms_webhook,
 )
 
 router = APIRouter(tags=["Communications"])
@@ -35,13 +35,20 @@ async def list_unassigned_messages(
     return [UnassignedMessageResponse.model_validate(row) for row in result.scalars().all()]
 
 
-@router.post("/webhooks/telnyx/inbound-sms")
-async def telnyx_inbound_sms(
+@router.post("/webhooks/sms/inbound")
+async def inbound_sms_webhook(
     request: Request,
-    telnyx_signature_ed25519: str | None = Header(default=None),
-    telnyx_timestamp: str | None = Header(default=None),
+    x_signature: str | None = Header(default=None),
+    x_timestamp: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ):
+    """Generic inbound SMS webhook endpoint.
+    
+    Configure your SMS gateway to POST to this endpoint with:
+    - X-Signature header: Ed25519 signature (base64 encoded)
+    - X-Timestamp header: Unix timestamp or ISO datetime
+    - JSON body with: from, to, text/message fields
+    """
     body = await request.body()
     try:
         payload = json.loads(body.decode() or "{}")
@@ -52,14 +59,14 @@ async def telnyx_inbound_sms(
     matched_settings = None
     for settings in result.scalars().all():
         sms_settings = settings.sms_settings if isinstance(settings.sms_settings, dict) else {}
-        telnyx = sms_settings.get("telnyx", {})
-        if verify_telnyx_webhook(telnyx, body, telnyx_signature_ed25519, telnyx_timestamp):
+        gateway = sms_settings.get("gateway", {})
+        if verify_sms_webhook(gateway, body, x_signature, x_timestamp):
             matched_settings = settings
             break
     if not matched_settings:
-        raise forbidden("Invalid Telnyx webhook signature")
+        raise forbidden("Invalid SMS webhook signature")
 
-    inbound = TelnyxInboundSms.model_validate(payload)
+    inbound = InboundSms.model_validate(payload)
     data = inbound.data or payload
     payload_data = data.get("payload", data) if isinstance(data, dict) else {}
     from_value = payload_data.get("from") or inbound.from_
