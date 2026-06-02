@@ -65,7 +65,8 @@ if frontend_dist.exists():
         """Serve SPA frontend with fallback to index.html for client-side routing"""
         # Don't interfere with API routes
         if full_path.startswith("api/"):
-            return {"detail": "Not Found"}, 404
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
         
         file_path = frontend_dist / full_path
         if file_path.exists() and file_path.is_file():
@@ -76,4 +77,5 @@ if frontend_dist.exists():
         if index_path.exists():
             return FileResponse(index_path)
         
-        return {"detail": "Not Found"}, 404
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Not Found")
