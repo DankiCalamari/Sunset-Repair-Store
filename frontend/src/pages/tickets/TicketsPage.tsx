@@ -136,6 +136,73 @@ export function TicketsPage() {
     },
   });
 
+  const { data: customers } = useQuery({
+    queryKey: ["customers-list"],
+    queryFn: () => customersApi.list(),
+    enabled: showCreate,
+  });
+
+  const { data: devices } = useQuery({
+    queryKey: ["devices", ticketForm.customer_id],
+    queryFn: () => devicesApi.byCustomer(ticketForm.customer_id),
+    enabled: showCreate && !!ticketForm.customer_id && !ticketForm.new_device,
+  });
+
+  const resetTicketForm = () =>
+    setTicketForm({
+      customer_id: "",
+      device_id: "",
+      issue_description: "",
+      priority: "normal",
+      customer_notes: "",
+      new_device: false,
+      manufacturer: "",
+      model: "",
+      imei: "",
+      serial_number: "",
+      colour: "",
+      passcode_provided: "",
+    });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      let deviceId = ticketForm.device_id;
+      if (ticketForm.new_device) {
+        const device = await devicesApi.create({
+          customer_id: ticketForm.customer_id,
+          manufacturer: ticketForm.manufacturer,
+          model: ticketForm.model,
+          imei: ticketForm.imei || undefined,
+          serial_number: ticketForm.serial_number || undefined,
+          colour: ticketForm.colour || undefined,
+          passcode_provided: ticketForm.passcode_provided || undefined,
+        });
+        deviceId = device.id;
+      }
+      return ticketsApi.create({
+        customer_id: ticketForm.customer_id,
+        device_id: deviceId,
+        issue_description: ticketForm.issue_description,
+        priority: ticketForm.priority,
+        customer_notes: ticketForm.customer_notes || undefined,
+      });
+    },
+    onSuccess: (ticket) => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      setSelected(ticket);
+      setActiveTab("details");
+      setShowCreate(false);
+      resetTicketForm();
+    },
+  });
+
+  const canCreateTicket =
+    !!ticketForm.customer_id &&
+    !!ticketForm.issue_description.trim() &&
+    (ticketForm.new_device
+      ? !!ticketForm.manufacturer.trim() && !!ticketForm.model.trim()
+      : !!ticketForm.device_id);
+
   const events: ConversationEvent[] = [
     ...(timeline || []).map((entry) => ({
       id: entry.id,
@@ -167,7 +234,7 @@ export function TicketsPage() {
           <h2 className="text-2xl font-bold">Repair Tickets</h2>
           <p className="text-muted-foreground">Manage repairs from intake to pickup</p>
         </div>
-        <Button>
+        <Button variant="accent" onClick={() => setShowCreate(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Ticket
         </Button>
@@ -362,6 +429,163 @@ export function TicketsPage() {
           )}
         </Card>
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto">
+            <CardHeader>
+              <CardTitle>New repair ticket</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Customer</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
+                  value={ticketForm.customer_id}
+                  onChange={(e) =>
+                    setTicketForm({
+                      ...ticketForm,
+                      customer_id: e.target.value,
+                      device_id: "",
+                      new_device: false,
+                    })
+                  }
+                >
+                  <option value="">Select customer...</option>
+                  {customers?.items.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {ticketForm.customer_id && (
+                <>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={ticketForm.new_device}
+                      onChange={(e) =>
+                        setTicketForm({
+                          ...ticketForm,
+                          new_device: e.target.checked,
+                          device_id: "",
+                        })
+                      }
+                    />
+                    Register a new device for this customer
+                  </label>
+
+                  {ticketForm.new_device ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input
+                        placeholder="Manufacturer"
+                        value={ticketForm.manufacturer}
+                        onChange={(e) => setTicketForm({ ...ticketForm, manufacturer: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Model"
+                        value={ticketForm.model}
+                        onChange={(e) => setTicketForm({ ...ticketForm, model: e.target.value })}
+                      />
+                      <Input
+                        placeholder="IMEI"
+                        value={ticketForm.imei}
+                        onChange={(e) => setTicketForm({ ...ticketForm, imei: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Serial number"
+                        value={ticketForm.serial_number}
+                        onChange={(e) => setTicketForm({ ...ticketForm, serial_number: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Colour"
+                        value={ticketForm.colour}
+                        onChange={(e) => setTicketForm({ ...ticketForm, colour: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Passcode provided"
+                        value={ticketForm.passcode_provided}
+                        onChange={(e) => setTicketForm({ ...ticketForm, passcode_provided: e.target.value })}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Device</label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
+                        value={ticketForm.device_id}
+                        onChange={(e) => setTicketForm({ ...ticketForm, device_id: e.target.value })}
+                      >
+                        <option value="">Select device...</option>
+                        {devices?.map((device) => (
+                          <option key={device.id} value={device.id}>
+                            {device.manufacturer} {device.model}
+                            {device.serial_number ? ` (${device.serial_number})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Issue description</label>
+                <textarea
+                  className="min-h-24 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                  placeholder="Describe the reported issue"
+                  value={ticketForm.issue_description}
+                  onChange={(e) => setTicketForm({ ...ticketForm, issue_description: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Priority</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 text-sm"
+                  value={ticketForm.priority}
+                  onChange={(e) => setTicketForm({ ...ticketForm, priority: e.target.value })}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Customer notes</label>
+                <Input
+                  placeholder="Optional notes from the customer"
+                  value={ticketForm.customer_notes}
+                  onChange={(e) => setTicketForm({ ...ticketForm, customer_notes: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreate(false);
+                    resetTicketForm();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="accent"
+                  disabled={!canCreateTicket || createMutation.isPending}
+                  onClick={() => createMutation.mutate()}
+                >
+                  Create ticket
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
