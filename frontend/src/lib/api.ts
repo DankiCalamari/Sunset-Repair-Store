@@ -434,7 +434,7 @@ export const adminApi = {
       next_ticket_seq: number;
       smtp: Record<string, unknown>;
       imap: Record<string, unknown>;
-      telnyx: Record<string, unknown>;
+      sms_gateway: Record<string, unknown>;
       automations: Record<string, unknown>;
     }>
   ) =>
