@@ -268,11 +268,20 @@ async def send_ticket_email(
     return comm
 
 
-def _send_telnyx_sync(config: dict[str, Any], recipient: str, message: str) -> str:
+def _send_sms_gateway_sync(config: dict[str, Any], recipient: str, message: str) -> str:
+    """Send SMS via a generic SMS gateway API.
+    
+    Configure in sms_settings.gateway with:
+    - api_url: The SMS gateway endpoint URL
+    - api_key: API key for authentication
+    - sending_number: The sender phone number
+    - auth_header: Optional, defaults to "Authorization: Bearer {api_key}"
+    """
     api_key = config.get("api_key")
     sender = config.get("sending_number")
-    if not api_key or not sender:
-        raise RuntimeError("Telnyx API key and sending number are not configured")
+    api_url = config.get("api_url")
+    if not api_key or not sender or not api_url:
+        raise RuntimeError("SMS gateway API URL, API key, and sending number are not configured")
     payload = json.dumps(
         {
             "from": sender,
@@ -281,15 +290,17 @@ def _send_telnyx_sync(config: dict[str, Any], recipient: str, message: str) -> s
         }
     ).encode()
     req = request.Request(
-        "https://api.telnyx.com/v2/messages",
+        api_url,
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    req.add_header("Authorization", f"Bearer {api_key}")
+    auth_header = config.get("auth_header", f"Bearer {api_key}")
+    req.add_header("Authorization", auth_header)
     with request.urlopen(req, timeout=20) as response:
         data = json.loads(response.read().decode())
-    return str(data.get("data", {}).get("id", ""))
+    # Try common response formats for message ID
+    return str(data.get("data", {}).get("id", "") or data.get("id", "") or data.get("message_id", ""))
 
 
 async def send_ticket_sms(
@@ -303,10 +314,10 @@ async def send_ticket_sms(
 ) -> TicketCommunication:
     settings = await get_business_settings(db, ticket.business_id)
     sms_settings = _settings_dict(settings, "sms_settings")
-    telnyx_config = sms_settings.get("telnyx", {})
+    gateway_config = sms_settings.get("gateway", {})
     context = await ticket_context(db, ticket)
     recipient = to or context["customer_phone"]
-    sender = telnyx_config.get("sending_number")
+    sender = gateway_config.get("sending_number")
     comm = TicketCommunication(
         business_id=ticket.business_id,
         ticket_id=ticket.id,
@@ -324,7 +335,7 @@ async def send_ticket_sms(
     try:
         if not recipient:
             raise RuntimeError("Customer mobile number is not available")
-        provider_id = await asyncio.to_thread(_send_telnyx_sync, telnyx_config, recipient, message)
+        provider_id = await asyncio.to_thread(_send_sms_gateway_sync, gateway_config, recipient, message)
         comm.status = "sent"
         comm.provider_message_id = provider_id
     except Exception as exc:
@@ -577,8 +588,13 @@ async def imap_poll_loop(session_factory: async_sessionmaker[AsyncSession]) -> N
         await asyncio.sleep(120)
 
 
-def verify_telnyx_webhook(config: dict[str, Any], body: bytes, signature: str | None, timestamp: str | None) -> bool:
-    public_key = config.get("public_key")
+def verify_sms_webhook(config: dict[str, Any], body: bytes, signature: str | None, timestamp: str | None) -> bool:
+    """Verify inbound SMS webhook signature.
+    
+    Supports Ed25519 signature verification. Configure in sms_settings.gateway with:
+    - webhook_public_key: Ed25519 public key (hex or base64 encoded)
+    """
+    public_key = config.get("webhook_public_key")
     if not public_key or not signature or not timestamp:
         return False
     try:
