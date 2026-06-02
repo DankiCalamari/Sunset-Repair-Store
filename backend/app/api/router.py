@@ -7,6 +7,7 @@ from app.api.v1 import (
     communications,
     customers,
     dashboard,
+    devices,
     inventory,
     invoices,
     portal,
@@ -24,6 +25,7 @@ api_router.include_router(auth.router)
 api_router.include_router(admin.router)
 api_router.include_router(communications.router)
 api_router.include_router(customers.router)
+api_router.include_router(devices.router)
 api_router.include_router(tickets.router)
 api_router.include_router(quotes.router)
 api_router.include_router(invoices.router)

@@ -570,6 +570,7 @@ export function TicketsPage() {
                   onClick={() => {
                     setShowCreate(false);
                     resetTicketForm();
+                    createMutation.reset();
                   }}
                 >
                   Cancel
@@ -579,9 +580,14 @@ export function TicketsPage() {
                   disabled={!canCreateTicket || createMutation.isPending}
                   onClick={() => createMutation.mutate()}
                 >
-                  Create ticket
+                  {createMutation.isPending ? "Creating..." : "Create ticket"}
                 </Button>
               </div>
+              {createMutation.isError && (
+                <p className="text-sm text-red-700">
+                  {createMutation.error instanceof Error ? createMutation.error.message : "Failed to create ticket"}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

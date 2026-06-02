@@ -6,10 +6,11 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import require_permission, Permission, CurrentUser
-from app.core.database import get_db
-from app.core.tenant import get_business_id
-from app.models.customer import Device
+from app.api.deps import CurrentUser, get_business_id, require_permission
+from app.core.exceptions import not_found
+from app.core.permissions import Permission
+from app.db.session import get_db
+from app.models.customer import Customer, Device
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
 
@@ -43,8 +44,8 @@ class DeviceResponse(BaseModel):
 @router.get("/by-customer/{customer_id}", response_model=list[DeviceResponse])
 async def list_devices_by_customer(
     customer_id: UUID,
-    user: CurrentUser = Depends(require_permission(Permission.TICKETS_READ)),
     business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.DEVICES_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     """List all devices for a specific customer."""
@@ -60,11 +61,21 @@ async def list_devices_by_customer(
 @router.post("", response_model=DeviceResponse, status_code=201)
 async def create_device(
     body: DeviceCreate,
-    user: CurrentUser = Depends(require_permission(Permission.TICKETS_WRITE)),
     business_id: UUID = Depends(get_business_id),
+    _: CurrentUser = Depends(require_permission(Permission.DEVICES_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new device for a customer."""
+    customer_result = await db.execute(
+        select(Customer).where(
+            Customer.id == body.customer_id,
+            Customer.business_id == business_id,
+            Customer.is_active.is_(True),
+        )
+    )
+    if not customer_result.scalar_one_or_none():
+        raise not_found("Customer")
+
     device = Device(
         business_id=business_id,
         customer_id=body.customer_id,
@@ -77,6 +88,6 @@ async def create_device(
         notes=body.notes,
     )
     db.add(device)
-    await db.commit()
+    await db.flush()
     await db.refresh(device)
     return device
