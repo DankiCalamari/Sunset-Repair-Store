@@ -11,5 +11,10 @@
     "node": "20.x",
     "npm": "10.x",
     "python": "3.12.x"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.100.14",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7"
   }
 }

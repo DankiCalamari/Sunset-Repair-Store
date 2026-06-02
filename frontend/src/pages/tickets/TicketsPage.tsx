@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, MessageSquare, Paperclip, RefreshCw, Send } from "lucide-react";
+import { Mail, MessageSquare, Paperclip, Plus, RefreshCw, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,9 +146,15 @@ export function TicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Repair Tickets</h2>
-        <p className="text-muted-foreground">Manage repairs from intake to pickup</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Repair Tickets</h2>
+          <p className="text-muted-foreground">Manage repairs from intake to pickup</p>
+        </div>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          New Ticket
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
