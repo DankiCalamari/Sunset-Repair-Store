@@ -4,7 +4,7 @@ export function SectionHeading({ eyebrow, title, text }: { eyebrow: string; titl
   return (
     <div className="mx-auto mb-12 max-w-3xl text-center">
       <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
-      <h2 className="mt-3 text-3xl font-black tracking-tight text-[#1c1815] sm:text-4xl lg:text-5xl">{title}</h2>
+      <h2 className="mt-3 text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">{title}</h2>
       <p className="mt-4 text-lg leading-8 text-stone-600">{text}</p>
     </div>
   );
@@ -16,7 +16,7 @@ export function PageIntro({ eyebrow, title, text }: { eyebrow: string; title: st
       <div className="absolute left-1/2 top-0 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-orange-200/30 blur-3xl" />
       <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
         <p className="text-sm font-bold uppercase tracking-[0.24em] text-orange-600">{eyebrow}</p>
-        <h1 className="mt-4 text-4xl font-black tracking-tight text-[#1c1815] sm:text-5xl lg:text-6xl">{title}</h1>
+        <h1 className="mt-4 text-4xl font-black tracking-tight text-stone-900 sm:text-5xl lg:text-6xl">{title}</h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-stone-600">{text}</p>
       </div>
     </section>
@@ -60,17 +60,24 @@ export function Select({ children, className, ...props }: SelectHTMLAttributes<H
   );
 }
 
-export function Button({ children, variant = "primary", size = "md", className = "", ...props }: {
+export function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  className = "",
+  ...props
+}: {
   children: ReactNode;
-  variant?: "primary" | "outline" | "ghost";
+  variant?: "primary" | "outline" | "ghost" | "white";
   size?: "sm" | "md" | "lg";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const base = "inline-flex items-center justify-center font-bold transition focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-50 disabled:pointer-events-none";
+  const base = "inline-flex items-center justify-center font-bold transition focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
   const variants = {
     primary: "bg-orange-600 text-white hover:bg-orange-700 shadow-lg shadow-orange-200",
     outline: "border-2 border-stone-900 bg-white text-stone-900 hover:bg-stone-50",
     ghost: "text-stone-700 hover:bg-orange-50 hover:text-orange-700",
+    white: "border-2 border-white bg-transparent text-white hover:bg-white/10",
   };
   const sizes = {
     sm: "h-9 rounded-lg px-4 text-sm",

@@ -58,7 +58,7 @@ export function HomePage() {
               Mildura mobile repair
             </div>
 
-            <h1 className="mt-6 text-5xl font-black leading-[1.05] tracking-tight text-[#1c1815] sm:text-6xl lg:text-7xl">
+            <h1 className="mt-6 text-5xl font-black leading-[1.05] tracking-tight text-stone-900 sm:text-6xl lg:text-7xl">
               We Come
               <br />
               To You.
@@ -69,17 +69,15 @@ export function HomePage() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link to="/book">
-                  Book a Mobile Repair <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link to="/track">Track My Repair</Link>
-              </Button>
-              <Button asChild variant="ghost" size="lg">
-                <Link to="/service-area">Service Area</Link>
-              </Button>
+              <Link to="/book" className="inline-flex h-14 items-center justify-center rounded-2xl bg-orange-600 px-8 text-base font-bold text-white shadow-lg shadow-orange-200 transition hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
+                Book a Mobile Repair <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+              <Link to="/track" className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-stone-900 bg-white px-8 text-base font-bold text-stone-900 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-300">
+                Track My Repair
+              </Link>
+              <Link to="/service-area" className="inline-flex h-14 items-center justify-center rounded-2xl px-8 text-base font-bold text-stone-700 transition hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
+                Service Area
+              </Link>
             </div>
 
             <div className="mt-10 flex flex-wrap gap-4 rounded-2xl border border-orange-100 bg-white/70 p-5 backdrop-blur">
@@ -95,7 +93,7 @@ export function HomePage() {
           <div className="relative">
             <div className="absolute -inset-4 rounded-[3rem] bg-gradient-to-br from-orange-200/40 to-amber-200/40 blur-2xl" />
             <div className="relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl shadow-orange-200/50">
-              <div className="rounded-2xl bg-gradient-to-br from-[#1c1815] to-orange-800 p-5 text-white">
+              <div className="rounded-2xl bg-gradient-to-br from-stone-900 to-orange-800 p-5 text-white">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">Mobile service unit</p>
@@ -116,11 +114,11 @@ export function HomePage() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-orange-100 bg-orange-50 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-orange-700">Next stop</p>
-                  <p className="mt-1 text-sm font-black">Your place</p>
+                  <p className="mt-1 text-sm font-black text-stone-900">Your place</p>
                 </div>
                 <div className="rounded-xl border border-orange-100 bg-white p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Available</p>
-                  <p className="mt-1 text-sm font-black">By appointment</p>
+                  <p className="mt-1 text-sm font-black text-stone-900">By appointment</p>
                 </div>
               </div>
             </div>
@@ -139,7 +137,7 @@ export function HomePage() {
           {whyCards.map(({ icon: Icon, title, text }) => (
             <Card key={title} className="transition hover:-translate-y-1 hover:shadow-lg hover:shadow-orange-100">
               <Icon className="h-8 w-8 text-orange-600" />
-              <h3 className="mt-4 text-lg font-black">{title}</h3>
+              <h3 className="mt-4 text-lg font-black text-stone-900">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-stone-600">{text}</p>
             </Card>
           ))}
@@ -156,9 +154,9 @@ export function HomePage() {
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {serviceCards.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="rounded-2xl border border-orange-100 bg-[#fff8f0] p-5 transition hover:shadow-md">
+              <div key={title} className="rounded-2xl border border-orange-100 bg-orange-50/50 p-5 transition hover:shadow-md">
                 <Icon className="h-9 w-9 text-orange-600" />
-                <h3 className="mt-4 text-xl font-black">{title}</h3>
+                <h3 className="mt-4 text-xl font-black text-stone-900">{title}</h3>
                 <p className="mt-2 text-sm leading-6 text-stone-600">{text}</p>
               </div>
             ))}
@@ -176,10 +174,10 @@ export function HomePage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {processCards.map(({ icon: Icon, title, text }) => (
             <div key={title} className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1c1815] text-amber-300">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-900 text-amber-300">
                 <Icon className="h-6 w-6" />
               </div>
-              <h3 className="mt-5 text-xl font-black">{title}</h3>
+              <h3 className="mt-5 text-xl font-black text-stone-900">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-stone-600">{text}</p>
             </div>
           ))}
@@ -192,12 +190,12 @@ export function HomePage() {
           <h2 className="text-3xl font-black text-white sm:text-4xl">Ready to get your device fixed?</h2>
           <p className="mt-4 text-lg text-white/90">Book a mobile repair today and we will come to you.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-              <Link to="/book">Book a Mobile Repair</Link>
-            </Button>
-            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
-              <Link to="/track">Track My Repair</Link>
-            </Button>
+            <Link to="/book" className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-white px-8 text-base font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50">
+              Book a Mobile Repair
+            </Link>
+            <Link to="/track" className="inline-flex h-14 items-center justify-center rounded-2xl px-8 text-base font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50">
+              Track My Repair
+            </Link>
           </div>
         </div>
       </section>

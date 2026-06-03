@@ -3,29 +3,13 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 28 100% 97%;
-    --foreground: 25 22% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 25 22% 9%;
-    --primary: 24 100% 50%;
-    --primary-foreground: 0 0% 100%;
-    --muted: 28 30% 94%;
-    --muted-foreground: 25 8% 44%;
-    --border: 28 25% 88%;
-    --radius: 0.75rem;
-  }
-
-  * {
-    @apply border-border;
-  }
-
   html {
     scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
     font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

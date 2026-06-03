@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Menu, Wrench, X } from "lucide-react";
 
@@ -16,7 +16,7 @@ export function Layout() {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#fff8f0]">
+    <div className="flex min-h-screen flex-col bg-orange-50/40">
       <header className="sticky top-0 z-50 border-b border-orange-100/60 bg-white/90 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
@@ -24,7 +24,7 @@ export function Layout() {
               <Wrench className="h-5 w-5" />
             </span>
             <span>
-              <span className="block text-base font-black tracking-tight sm:text-lg">Sunset Country Repairs</span>
+              <span className="block text-base font-black tracking-tight text-stone-900 sm:text-lg">Sunset Country Repairs</span>
               <span className="block text-[11px] font-bold uppercase tracking-[0.18em] text-orange-700">Mobile tech repair · Sunraysia</span>
             </span>
           </Link>
@@ -97,7 +97,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-orange-100 bg-[#1c1815] text-white">
+      <footer className="border-t border-orange-100 bg-stone-900 text-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
           <div>
             <div className="flex items-center gap-3">

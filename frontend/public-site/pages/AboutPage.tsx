@@ -1,5 +1,5 @@
 import { BriefcaseBusiness, CheckCircle2, Heart, Home, Mail, MapPin, Phone, ShieldCheck, Truck } from "lucide-react";
-import { Button, PageIntro, SectionHeading } from "../components/ui";
+import { PageIntro, SectionHeading } from "../components/ui";
 
 const values = [
   { icon: ShieldCheck, title: "Trust", text: "Clear explanations, honest pricing, and quote approvals before repair work proceeds." },
@@ -111,12 +111,12 @@ export function AboutPage() {
           <h2 className="text-3xl font-black text-white sm:text-4xl">Ready to get started?</h2>
           <p className="mt-4 text-lg text-white/90">Book a mobile repair today and experience the convenience of tech support that comes to you.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-              <a href="/book">Book a Mobile Repair</a>
-            </Button>
-            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
-              <a href="/track">Track My Repair</a>
-            </Button>
+            <a href="/book" className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-white px-8 text-base font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50">
+              Book a Mobile Repair
+            </a>
+            <a href="/track" className="inline-flex h-14 items-center justify-center rounded-2xl px-8 text-base font-bold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50">
+              Track My Repair
+            </a>
           </div>
         </div>
       </section>
