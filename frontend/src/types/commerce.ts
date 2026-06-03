@@ -291,6 +291,44 @@ export interface AdminUser {
   created_at: string;
 }
 
+export interface DocumentTemplate {
+  title: string;
+  subtitle: string;
+  show_logo: boolean;
+  show_business_address: boolean;
+  show_business_contact: boolean;
+  show_abn: boolean;
+  show_ticket_number: boolean;
+  show_customer_phone: boolean;
+  show_customer_email: boolean;
+  show_page_numbers: boolean;
+  show_line_type: boolean;
+  table_style: string;
+  accent_bar: boolean;
+  terms_text: string;
+  footer_text: string;
+  logo_max_height_mm: number;
+}
+
+export const DEFAULT_DOCUMENT_TEMPLATE: DocumentTemplate = {
+  title: "",
+  subtitle: "",
+  show_logo: true,
+  show_business_address: true,
+  show_business_contact: true,
+  show_abn: true,
+  show_ticket_number: true,
+  show_customer_phone: true,
+  show_customer_email: true,
+  show_page_numbers: true,
+  show_line_type: true,
+  table_style: "striped",
+  accent_bar: true,
+  terms_text: "",
+  footer_text: "Thank you for your business.",
+  logo_max_height_mm: 18,
+};
+
 export interface BusinessSettings {
   business_id: string;
   business_name: string;
@@ -308,6 +346,8 @@ export interface BusinessSettings {
   ticket_prefix: string;
   next_ticket_seq: number;
   branding_json: Record<string, unknown>;
+  quote_template_json: DocumentTemplate;
+  invoice_template_json: DocumentTemplate;
   email_settings: Record<string, unknown>;
   sms_settings: Record<string, unknown>;
 }

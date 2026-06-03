@@ -1,7 +1,10 @@
 from uuid import UUID
 
 import asyncio
+from datetime import datetime, timezone
+from decimal import Decimal
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from email.message import EmailMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +28,15 @@ from app.schemas.admin import (
 )
 from app.services.smtp_service import resolve_smtp_security, security_mode_label, send_email_message
 from app.services.imap_service import test_imap_connection
+from app.services.pdf_service import (
+    BrandingContext,
+    DocumentLine,
+    DocumentTemplate,
+    InvoicePdfContext,
+    QuotePdfContext,
+    render_invoice_pdf,
+    render_quote_pdf,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -55,6 +67,8 @@ async def _settings_response(db: AsyncSession, business_id: UUID) -> BusinessSet
         ticket_prefix=settings.ticket_prefix,
         next_ticket_seq=settings.next_ticket_seq,
         branding_json=settings.branding_json or {},
+        quote_template_json=settings.quote_template_json or {},
+        invoice_template_json=settings.invoice_template_json or {},
         email_settings=settings.email_settings or {},
         sms_settings=settings.sms_settings or {},
     )
@@ -174,6 +188,10 @@ async def update_settings(
         sms_settings["gateway"] = data["sms_gateway"] or {}
     if "branding" in data:
         settings.branding_json = data["branding"] or {}
+    if "quote_template" in data:
+        settings.quote_template_json = data["quote_template"] or {}
+    if "invoice_template" in data:
+        settings.invoice_template_json = data["invoice_template"] or {}
     settings.email_settings = dict(email_settings)
     settings.sms_settings = dict(sms_settings)
     await db.flush()
@@ -240,3 +258,101 @@ async def test_imap_settings(
         raise bad_request(str(exc), "IMAP_TEST_FAILED") from exc
 
     return ImapTestResponse(ok=True, message=message)
+
+
+def _sample_quote_context() -> QuotePdfContext:
+    return QuotePdfContext(
+        quote_number="QUO-0001",
+        status="sent",
+        created_at=datetime.now(timezone.utc),
+        valid_until=None,
+        customer_name="Sample Customer",
+        customer_email="customer@example.com",
+        phone="(02) 9999 0000",
+        ticket_number="RCT-10042",
+        lines=[
+            DocumentLine(description="Diagnostic fee", quantity=Decimal("1"), unit_price=Decimal("88.00"), line_type="labour"),
+            DocumentLine(description="Screen replacement", quantity=Decimal("1"), unit_price=Decimal("220.00"), line_type="parts"),
+            DocumentLine(description="Labour - screen install", quantity=Decimal("1.5"), unit_price=Decimal("88.00"), line_type="labour"),
+        ],
+        subtotal=Decimal("440.00"),
+        tax_amount=Decimal("44.00"),
+        discount_amount=Decimal("0.00"),
+        total=Decimal("484.00"),
+        tax_rate=Decimal("0.10"),
+    )
+
+
+def _sample_invoice_context() -> InvoicePdfContext:
+    return InvoicePdfContext(
+        invoice_number="INV-0001",
+        status="sent",
+        issued_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        customer_name="Sample Customer",
+        customer_email="customer@example.com",
+        phone="(02) 9999 0000",
+        ticket_number="RCT-10042",
+        lines=[
+            DocumentLine(description="Diagnostic fee", quantity=Decimal("1"), unit_price=Decimal("88.00"), line_type="labour"),
+            DocumentLine(description="Screen replacement", quantity=Decimal("1"), unit_price=Decimal("220.00"), line_type="parts"),
+            DocumentLine(description="Labour - screen install", quantity=Decimal("1.5"), unit_price=Decimal("88.00"), line_type="labour"),
+        ],
+        subtotal=Decimal("440.00"),
+        tax_amount=Decimal("44.00"),
+        discount_amount=Decimal("0.00"),
+        total=Decimal("484.00"),
+        amount_paid=Decimal("200.00"),
+        tax_rate=Decimal("0.10"),
+        payments=[
+            {"paid_at": datetime.now(timezone.utc), "method": "bank_transfer", "reference": "PAY-001", "amount": Decimal("200.00")},
+        ],
+    )
+
+
+def _sample_branding() -> BrandingContext:
+    return BrandingContext(
+        business_name="Your Business",
+        legal_name="Your Business Pty Ltd",
+        abn="12 345 678 901",
+        email="info@yourbusiness.com.au",
+        phone="(02) 9999 0000",
+        address_line1="123 Main Street",
+        city="Sydney",
+        state="NSW",
+        postcode="2000",
+        currency="AUD",
+        primary_color="#1e3a5f",
+        accent_color="#d97706",
+        logo_bytes=None,
+    )
+
+
+@router.post("/settings/preview-quote")
+async def preview_quote_template(
+    body: dict,
+    _: CurrentUser = Depends(require_permission(Permission.ADMIN_SETTINGS)),
+):
+    template = DocumentTemplate.from_json(body)
+    branding = _sample_branding()
+    pdf_bytes = render_quote_pdf(branding, _sample_quote_context(), template)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="quote-preview.pdf"'},
+    )
+
+
+@router.post("/settings/preview-invoice")
+async def preview_invoice_template(
+    body: dict,
+    _: CurrentUser = Depends(require_permission(Permission.ADMIN_SETTINGS)),
+):
+    template = DocumentTemplate.from_json(body)
+    branding = _sample_branding()
+    pdf_bytes = render_invoice_pdf(branding, _sample_invoice_context(), template)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="invoice-preview.pdf"'},
+    )

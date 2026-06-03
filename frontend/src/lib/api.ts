@@ -535,6 +535,30 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  previewQuoteTemplate: async (template: Record<string, unknown>) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(buildUrl("/api/v1/admin/settings/preview-quote"), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(template),
+    });
+    if (!res.ok) throw new Error("Preview failed");
+    return res.blob();
+  },
+  previewInvoiceTemplate: async (template: Record<string, unknown>) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(buildUrl("/api/v1/admin/settings/preview-invoice"), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(template),
+    });
+    if (!res.ok) throw new Error("Preview failed");
+    return res.blob();
+  },
 };
 
 export function formatMoney(value: string | number) {

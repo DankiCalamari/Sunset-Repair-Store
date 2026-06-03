@@ -52,6 +52,8 @@ class BusinessSettingsResponse(BaseModel):
     ticket_prefix: str
     next_ticket_seq: int
     branding_json: dict
+    quote_template_json: dict
+    invoice_template_json: dict
     email_settings: dict
     sms_settings: dict
 
@@ -76,6 +78,8 @@ class BusinessSettingsUpdate(BaseModel):
     sms_gateway: dict | None = None
     automations: dict | None = None
     branding: dict | None = None
+    quote_template: dict | None = None
+    invoice_template: dict | None = None
 
 
 class SmtpTestRequest(BaseModel):

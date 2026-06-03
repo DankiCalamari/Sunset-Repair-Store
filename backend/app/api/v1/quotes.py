@@ -32,6 +32,7 @@ from app.services.document_service import (
 )
 from app.services.pdf_service import (
     DocumentLine,
+    DocumentTemplate,
     QuotePdfContext,
     branding_from_business,
     load_logo_bytes,
@@ -174,6 +175,9 @@ async def download_quote_pdf(
     logo_bytes = await load_logo_bytes(branding_data if isinstance(branding_data, dict) else {})
     branding = branding_from_business(business, settings, logo_bytes)
     tax_rate = await get_tax_rate(db, business_id)
+    quote_template = DocumentTemplate.from_json(
+        (settings.quote_template_json if settings else {}) or {}
+    )
 
     pdf_bytes = render_quote_pdf(
         branding,
@@ -201,6 +205,7 @@ async def download_quote_pdf(
             total=Decimal(str(quote.total)),
             tax_rate=tax_rate,
         ),
+        quote_template,
     )
     filename = f"{quote.quote_number}.pdf"
     return Response(

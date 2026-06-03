@@ -22,6 +22,33 @@ MARGIN = 18 * mm
 
 
 @dataclass
+class DocumentTemplate:
+    """Customisable template options for quote/invoice PDFs."""
+    title: str = ""                          # Override document title (e.g. "QUOTATION")
+    subtitle: str = ""                       # Small text under the title
+    show_logo: bool = True
+    show_business_address: bool = True
+    show_business_contact: bool = True
+    show_abn: bool = True
+    show_ticket_number: bool = True
+    show_customer_phone: bool = True
+    show_customer_email: bool = True
+    show_page_numbers: bool = True
+    show_line_type: bool = True              # Show [labour] / [parts] labels
+    table_style: str = "striped"             # "striped", "bordered", "minimal"
+    accent_bar: bool = True                  # Coloured accent bar under header
+    terms_text: str = ""                     # Terms & conditions text
+    footer_text: str = "Thank you for your business."
+    logo_max_height_mm: float = 18.0
+
+    @classmethod
+    def from_json(cls, data: dict | None) -> "DocumentTemplate":
+        if not data:
+            return cls()
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
 class BrandingContext:
     business_name: str
     legal_name: str | None = None
@@ -35,7 +62,6 @@ class BrandingContext:
     currency: str = "AUD"
     primary_color: str = "#1e3a5f"
     accent_color: str = "#d97706"
-    footer_text: str = "Thank you for your business."
     logo_bytes: bytes | None = None
 
 
@@ -168,7 +194,6 @@ def branding_from_business(business: Any, settings: Any | None, logo_bytes: byte
         currency=business.currency or "AUD",
         primary_color=str(branding.get("primary_color") or "#1e3a5f"),
         accent_color=str(branding.get("accent_color") or "#d97706"),
-        footer_text=str(branding.get("footer_text") or "Thank you for your business."),
         logo_bytes=logo_bytes,
     )
 
@@ -218,31 +243,51 @@ def _styles(branding: BrandingContext) -> dict[str, ParagraphStyle]:
     }
 
 
-def _header_elements(branding: BrandingContext, styles: dict[str, ParagraphStyle]) -> list[Any]:
+def _header_elements(
+    branding: BrandingContext,
+    styles: dict[str, ParagraphStyle],
+    template: DocumentTemplate,
+) -> list[Any]:
     primary = _hex_color(branding.primary_color)
     accent = _hex_color(branding.accent_color)
     display_name = branding.legal_name or branding.business_name
+    story: list[Any] = []
 
-    logo_cell: Any
-    if branding.logo_bytes:
+    # Logo
+    logo_cell: Any = ""
+    if template.show_logo and branding.logo_bytes:
         try:
-            img = Image(ImageReader(io.BytesIO(branding.logo_bytes)), width=42 * mm, height=18 * mm, kind="proportional")
+            max_h = template.logo_max_height_mm * mm
+            img = Image(ImageReader(io.BytesIO(branding.logo_bytes)), width=42 * mm, height=max_h, kind="proportional")
             logo_cell = img
         except Exception:
             logo_cell = Paragraph(f"<b>{display_name}</b>", styles["title"])
-    else:
-        logo_cell = Paragraph(f"<b>{display_name}</b>", styles["title"])
 
-    address = _business_address(branding)
-    contact = _business_contact(branding)
+    # Right side info
     right_lines = [f"<b>{display_name}</b>"]
-    if address:
-        right_lines.append(address)
-    if contact:
-        right_lines.append(contact)
+    if template.show_business_address:
+        address = _business_address(branding)
+        if address:
+            right_lines.append(address)
+    if template.show_business_contact:
+        contact_parts = []
+        if branding.phone:
+            contact_parts.append(branding.phone)
+        if branding.email:
+            contact_parts.append(branding.email)
+        if template.show_abn and branding.abn:
+            contact_parts.append(f"ABN {branding.abn}")
+        if contact_parts:
+            right_lines.append(" · ".join(contact_parts))
+    elif template.show_abn and branding.abn:
+        right_lines.append(f"ABN {branding.abn}")
 
+    if not right_lines[1:]:
+        right_lines = [f"<b>{display_name}</b>"]
+
+    left_cell = logo_cell if logo_cell else Paragraph(f"<b>{display_name}</b>", styles["title"])
     header_table = Table(
-        [[logo_cell, Paragraph("<br/>".join(right_lines), styles["body"])]],
+        [[left_cell, Paragraph("<br/>".join(right_lines), styles["body"])]],
         colWidths=[55 * mm, PAGE_WIDTH - 2 * MARGIN - 55 * mm],
     )
     header_table.setStyle(
@@ -257,22 +302,28 @@ def _header_elements(branding: BrandingContext, styles: dict[str, ParagraphStyle
             ]
         )
     )
+    story.append(header_table)
+    story.append(Spacer(1, 4 * mm))
 
-    accent_bar = Table([[""]], colWidths=[PAGE_WIDTH - 2 * MARGIN], rowHeights=[2.5 * mm])
-    accent_bar.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), accent),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ]
+    if template.accent_bar:
+        accent_bar = Table([[""]], colWidths=[PAGE_WIDTH - 2 * MARGIN], rowHeights=[2.5 * mm])
+        accent_bar.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), accent),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
         )
-    )
+        story.append(accent_bar)
+        story.append(Spacer(1, 2 * mm))
 
     divider = Table([[""]], colWidths=[PAGE_WIDTH - 2 * MARGIN], rowHeights=[0.4 * mm])
     divider.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), primary)]))
-
-    return [header_table, Spacer(1, 4 * mm), accent_bar, Spacer(1, 2 * mm), divider, Spacer(1, 8 * mm)]
+    story.append(divider)
+    story.append(Spacer(1, 8 * mm))
+    return story
 
 
 def _meta_block(title: str, rows: list[tuple[str, str]], styles: dict[str, ParagraphStyle]) -> Table:
@@ -294,39 +345,47 @@ def _meta_block(title: str, rows: list[tuple[str, str]], styles: dict[str, Parag
     return table
 
 
-def _lines_table(lines: list[DocumentLine], currency: str, accent: colors.Color) -> Table:
+def _lines_table(lines: list[DocumentLine], currency: str, accent: colors.Color, template: DocumentTemplate) -> Table:
     header = ["Item", "Qty", "Unit price", "Amount"]
     rows: list[list[Any]] = [header]
     for line in lines:
-        prefix = f"[{line.line_type}] " if line.line_type else ""
+        prefix = f"[{line.line_type}] " if (template.show_line_type and line.line_type) else ""
+        qty_str = f"{line.quantity:.2f}".rstrip("0").rstrip(".") if line.quantity % 1 else str(int(line.quantity))
         rows.append(
             [
                 f"{prefix}{line.description}",
-                f"{line.quantity:.2f}".rstrip("0").rstrip(".") if line.quantity % 1 else str(int(line.quantity)),
+                qty_str,
                 _format_money(line.unit_price, currency),
                 _format_money(line.line_total, currency),
             ]
         )
 
     table = Table(rows, colWidths=[88 * mm, 18 * mm, 28 * mm, 28 * mm], repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), accent),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ]
-        )
-    )
+
+    # Build style commands based on template.table_style
+    style_cmds: list[tuple] = [
+        ("BACKGROUND", (0, 0), (-1, 0), accent),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]
+
+    if template.table_style == "striped":
+        style_cmds.extend([
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
+        ])
+    elif template.table_style == "bordered":
+        style_cmds.append(("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")))
+    # "minimal" — no grid, no stripes
+
+    table.setStyle(TableStyle(style_cmds))
     return table
 
 
@@ -384,72 +443,88 @@ def _build_pdf(title: str, story: list[Any]) -> bytes:
     return buffer.getvalue()
 
 
-def render_quote_pdf(branding: BrandingContext, quote: QuotePdfContext) -> bytes:
+def render_quote_pdf(branding: BrandingContext, quote: QuotePdfContext, template: DocumentTemplate | None = None) -> bytes:
+    tpl = template or DocumentTemplate()
     styles = _styles(branding)
     accent = _hex_color(branding.accent_color)
-    story = _header_elements(branding, styles)
-    story.append(Paragraph("QUOTATION", styles["title"]))
+    story = _header_elements(branding, styles, tpl)
+
+    title = tpl.title.upper() or "QUOTATION"
+    story.append(Paragraph(title, styles["title"]))
+    if tpl.subtitle:
+        story.append(Paragraph(tpl.subtitle, styles["subtitle"]))
     story.append(Spacer(1, 4 * mm))
 
-    doc_meta = _meta_block(
-        "Quote details",
-        [
-            ("Quote #", quote.quote_number),
-            ("Date", _format_date(quote.created_at)),
-            ("Valid until", _format_date(quote.valid_until)),
-            ("Status", quote.status.replace("_", " ").title()),
-        ],
-        styles,
-    )
-    customer_meta = _meta_block(
-        "Customer",
-        [
-            ("Name", quote.customer_name),
-            ("Email", quote.customer_email or "—"),
-            ("Phone", quote.customer_phone or "—"),
-            ("Ticket", quote.ticket_number or "—"),
-        ],
-        styles,
-    )
+    doc_meta_rows: list[tuple[str, str]] = [
+        ("Quote #", quote.quote_number),
+        ("Date", _format_date(quote.created_at)),
+        ("Valid until", _format_date(quote.valid_until)),
+        ("Status", quote.status.replace("_", " ").title()),
+    ]
+    doc_meta = _meta_block("Quote details", doc_meta_rows, styles)
+
+    customer_meta_rows: list[tuple[str, str]] = [("Name", quote.customer_name)]
+    if tpl.show_customer_email:
+        customer_meta_rows.append(("Email", quote.customer_email or "—"))
+    if tpl.show_customer_phone:
+        customer_meta_rows.append(("Phone", quote.customer_phone or "—"))
+    if tpl.show_ticket_number:
+        customer_meta_rows.append(("Ticket", quote.ticket_number or "—"))
+    customer_meta = _meta_block("Customer", customer_meta_rows, styles)
+
     story.append(Table([[doc_meta, customer_meta]], colWidths=[95 * mm, 95 * mm]))
     story.append(Spacer(1, 8 * mm))
-    story.append(_lines_table(quote.lines, branding.currency, accent))
+    story.append(_lines_table(quote.lines, branding.currency, accent, tpl))
     story.append(Spacer(1, 6 * mm))
     story.append(_totals_table(quote.subtotal, quote.discount_amount, quote.tax_amount, quote.total, quote.tax_rate, branding.currency))
-    story.append(Spacer(1, 10 * mm))
-    story.append(Paragraph(branding.footer_text, styles["footer"]))
+
+    if tpl.terms_text:
+        story.append(Spacer(1, 6 * mm))
+        story.append(Paragraph(f"<b>Terms & Conditions</b>", styles["label"]))
+        story.append(Paragraph(tpl.terms_text, styles["body"]))
+
+    if tpl.footer_text:
+        story.append(Spacer(1, 10 * mm))
+        story.append(Paragraph(tpl.footer_text, styles["footer"]))
+
+    if tpl.show_page_numbers:
+        story.append(Spacer(1, 4 * mm))
+        story.append(Paragraph("Page 1 of 1", styles["footer"]))
+
     return _build_pdf(f"Quote {quote.quote_number}", story)
 
 
-def render_invoice_pdf(branding: BrandingContext, invoice: InvoicePdfContext) -> bytes:
+def render_invoice_pdf(branding: BrandingContext, invoice: InvoicePdfContext, template: DocumentTemplate | None = None) -> bytes:
+    tpl = template or DocumentTemplate()
     styles = _styles(branding)
     accent = _hex_color(branding.accent_color)
-    story = _header_elements(branding, styles)
-    story.append(Paragraph("TAX INVOICE", styles["title"]))
+    story = _header_elements(branding, styles, tpl)
+
+    title = tpl.title.upper() or "TAX INVOICE"
+    story.append(Paragraph(title, styles["title"]))
+    if tpl.subtitle:
+        story.append(Paragraph(tpl.subtitle, styles["subtitle"]))
     story.append(Spacer(1, 4 * mm))
 
-    doc_meta = _meta_block(
-        "Invoice details",
-        [
-            ("Invoice #", invoice.invoice_number),
-            ("Issued", _format_date(invoice.issued_at or invoice.created_at)),
-            ("Status", invoice.status.replace("_", " ").title()),
-            ("Ticket", invoice.ticket_number or "—"),
-        ],
-        styles,
-    )
-    customer_meta = _meta_block(
-        "Bill to",
-        [
-            ("Name", invoice.customer_name),
-            ("Email", invoice.customer_email or "—"),
-            ("Phone", invoice.customer_phone or "—"),
-        ],
-        styles,
-    )
+    doc_meta_rows: list[tuple[str, str]] = [
+        ("Invoice #", invoice.invoice_number),
+        ("Issued", _format_date(invoice.issued_at or invoice.created_at)),
+        ("Status", invoice.status.replace("_", " ").title()),
+    ]
+    if tpl.show_ticket_number:
+        doc_meta_rows.append(("Ticket", invoice.ticket_number or "—"))
+    doc_meta = _meta_block("Invoice details", doc_meta_rows, styles)
+
+    customer_meta_rows: list[tuple[str, str]] = [("Name", invoice.customer_name)]
+    if tpl.show_customer_email:
+        customer_meta_rows.append(("Email", invoice.customer_email or "—"))
+    if tpl.show_customer_phone:
+        customer_meta_rows.append(("Phone", invoice.customer_phone or "—"))
+    customer_meta = _meta_block("Bill to", customer_meta_rows, styles)
+
     story.append(Table([[doc_meta, customer_meta]], colWidths=[95 * mm, 95 * mm]))
     story.append(Spacer(1, 8 * mm))
-    story.append(_lines_table(invoice.lines, branding.currency, accent))
+    story.append(_lines_table(invoice.lines, branding.currency, accent, tpl))
     story.append(Spacer(1, 6 * mm))
 
     balance = max(invoice.total - invoice.amount_paid, Decimal("0"))
@@ -496,6 +571,17 @@ def render_invoice_pdf(branding: BrandingContext, invoice: InvoicePdfContext) ->
         )
         story.append(payments_table)
 
-    story.append(Spacer(1, 10 * mm))
-    story.append(Paragraph(branding.footer_text, styles["footer"]))
+    if tpl.terms_text:
+        story.append(Spacer(1, 6 * mm))
+        story.append(Paragraph(f"<b>Terms & Conditions</b>", styles["label"]))
+        story.append(Paragraph(tpl.terms_text, styles["body"]))
+
+    if tpl.footer_text:
+        story.append(Spacer(1, 10 * mm))
+        story.append(Paragraph(tpl.footer_text, styles["footer"]))
+
+    if tpl.show_page_numbers:
+        story.append(Spacer(1, 4 * mm))
+        story.append(Paragraph("Page 1 of 1", styles["footer"]))
+
     return _build_pdf(f"Invoice {invoice.invoice_number}", story)

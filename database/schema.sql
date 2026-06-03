@@ -102,16 +102,18 @@ CREATE TABLE role_permissions (
 );
 
 CREATE TABLE business_settings (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
-  branding_json   JSONB DEFAULT '{}',
-  email_settings  JSONB DEFAULT '{}',
-  sms_settings    JSONB DEFAULT '{}',
-  tax_rate        DECIMAL(5,4) DEFAULT 0.1000,
-  ticket_prefix   VARCHAR(10) DEFAULT 'RCT',
-  next_ticket_seq INTEGER NOT NULL DEFAULT 1,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  business_id           UUID NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
+  branding_json         JSONB DEFAULT '{}',
+  quote_template_json   JSONB DEFAULT '{}',
+  invoice_template_json JSONB DEFAULT '{}',
+  email_settings        JSONB DEFAULT '{}',
+  sms_settings          JSONB DEFAULT '{}',
+  tax_rate              DECIMAL(5,4) DEFAULT 0.1000,
+  ticket_prefix         VARCHAR(10) DEFAULT 'RCT',
+  next_ticket_seq       INTEGER NOT NULL DEFAULT 1,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE setup_verification_codes (

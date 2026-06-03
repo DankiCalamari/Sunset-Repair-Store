@@ -38,6 +38,8 @@ class BusinessSettings(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     business_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("businesses.id"), unique=True)
     branding_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    quote_template_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    invoice_template_json: Mapped[dict] = mapped_column(JSONB, default=dict)
     email_settings: Mapped[dict] = mapped_column(JSONB, default=dict)
     sms_settings: Mapped[dict] = mapped_column(JSONB, default=dict)
     tax_rate: Mapped[float] = mapped_column(Numeric(5, 4), default=0.1)

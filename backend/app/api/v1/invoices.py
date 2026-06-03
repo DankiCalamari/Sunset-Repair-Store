@@ -35,6 +35,7 @@ from app.services.document_service import (
 )
 from app.services.pdf_service import (
     DocumentLine,
+    DocumentTemplate,
     InvoicePdfContext,
     branding_from_business,
     load_logo_bytes,
@@ -210,6 +211,9 @@ async def download_invoice_pdf(
     logo_bytes = await load_logo_bytes(branding_data if isinstance(branding_data, dict) else {})
     branding = branding_from_business(business, settings, logo_bytes)
     tax_rate = await get_tax_rate(db, business_id)
+    invoice_template = DocumentTemplate.from_json(
+        (settings.invoice_template_json if settings else {}) or {}
+    )
 
     pdf_bytes = render_invoice_pdf(
         branding,
@@ -246,6 +250,7 @@ async def download_invoice_pdf(
                 for payment in invoice.payments
             ],
         ),
+        invoice_template,
     )
     filename = f"{invoice.invoice_number}.pdf"
     return Response(
