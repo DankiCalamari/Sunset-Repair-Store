@@ -7,7 +7,9 @@ RUN npm ci
 
 COPY . .
 
-RUN npx vite build --config vite.config.public.ts
+RUN ls -la /app/public-site/ && \
+    npx vite build --config vite.config.public.ts && \
+    ls -la /app/dist-public/
 
 FROM nginx:alpine
 
