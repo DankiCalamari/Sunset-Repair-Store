@@ -78,6 +78,21 @@ services:
       - ./frontend/package.json:/app/package.json
       - ./frontend/package-lock.json:/app/package-lock.json
 
+  public-website:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.public
+    env_file:
+      - .env
+    environment:
+      VITE_API_URL: ${PUBLIC_API_URL:-http://localhost}
+      VITE_PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   minio_data:
