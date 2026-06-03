@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src/public-site"),
+        "@": path.resolve(__dirname, "public-site"),
       },
     },
     root: path.resolve(__dirname, "public-site"),
