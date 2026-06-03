@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      outDir: "dist-public",
+      outDir: path.resolve(__dirname, "dist-public"),
     },
   };
 });
