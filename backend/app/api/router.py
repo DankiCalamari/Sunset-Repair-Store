@@ -12,6 +12,7 @@ from app.api.v1 import (
     invoices,
     portal,
     pos,
+    public,
     quotes,
     reports,
     setup,
@@ -35,4 +36,5 @@ api_router.include_router(pos.router)
 api_router.include_router(reports.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(portal.router)
+api_router.include_router(public.router)
 api_router.include_router(ws.router)

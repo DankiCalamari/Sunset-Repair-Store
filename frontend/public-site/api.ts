@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const PUBLIC_API_KEY = import.meta.env.VITE_PUBLIC_API_KEY ?? "";
+const BUSINESS_SLUG = import.meta.env.VITE_BUSINESS_SLUG ?? "sunset-country-tech";
 
 const buildUrl = (path: string) => {
   const base = API_BASE.replace(/\/+$/g, "");
@@ -79,10 +80,13 @@ export interface PublicPortalSummary {
 
 export const publicWebsiteApi = {
   createBooking: (data: PublicBookingPayload) =>
-    publicApi<{ ticket_id: string; ticket_number: string; status: string }>("/api/v1/public/bookings", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    publicApi<{ ticket_id: string; ticket_number: string; status: string }>(
+      `/api/v1/public/bookings?business_slug=${encodeURIComponent(BUSINESS_SLUG)}`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    ),
   trackRepair: (ticket_reference: string, contact: string) =>
     publicApi<PublicTrackerResponse>("/api/v1/public/tracking", {
       method: "POST",
