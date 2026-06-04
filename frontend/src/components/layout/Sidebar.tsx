@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useSettings";
 
 const nav = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,12 +28,24 @@ const nav = [
 ];
 
 export function Sidebar() {
+  const branding = useSettings((s) => s.branding);
+  const logoSrc = branding.logo_data_url || branding.logo_url;
+  const displayName = branding.legal_name || branding.business_name;
+
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-        <div className="h-8 w-8 rounded-lg bg-accent" />
-        <div>
-          <p className="text-sm font-bold leading-tight">Repair Shop</p>
+        {logoSrc ? (
+          <img
+            src={logoSrc}
+            alt="Logo"
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+        ) : (
+          <div className="h-8 w-8 rounded-lg bg-accent" />
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold leading-tight">{displayName}</p>
           <p className="text-xs text-muted-foreground">ERP</p>
         </div>
       </div>

@@ -1,13 +1,16 @@
 import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSettings } from "@/hooks/useSettings";
 
 export function Header() {
   const { user, logout } = useAuth();
+  const branding = useSettings((s) => s.branding);
+  const displayName = branding.legal_name || branding.business_name;
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      <h1 className="text-lg font-semibold lg:hidden">Repair Shop</h1>
+      <h1 className="text-lg font-semibold lg:hidden">{displayName}</h1>
       <div className="ml-auto flex items-center gap-3">
         <button
           type="button"
