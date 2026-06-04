@@ -163,6 +163,12 @@ export function InvoicesPage() {
                     <span className="text-muted-foreground">GST</span>
                     <span>{formatMoney(selected.tax_amount)}</span>
                   </div>
+                  {selected.discount_amount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-{formatMoney(selected.discount_amount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
                     <span>{formatMoney(selected.total)}</span>

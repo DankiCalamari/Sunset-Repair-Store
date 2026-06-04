@@ -152,6 +152,12 @@ export function QuotesPage() {
                     <span className="text-muted-foreground">GST</span>
                     <span>{formatMoney(selected.tax_amount)}</span>
                   </div>
+                  {selected.discount_amount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-{formatMoney(selected.discount_amount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t pt-2 text-base font-semibold">
                     <span>Total</span>
                     <span>{formatMoney(selected.total)}</span>
@@ -279,6 +285,17 @@ export function QuotesPage() {
               >
                 + Add line
               </Button>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Discount</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={discount || ""}
+                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                  placeholder="Discount amount"
+                />
+              </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
                 <Button

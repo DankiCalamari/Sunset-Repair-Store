@@ -252,6 +252,7 @@ export const invoicesApi = {
     ticket_id?: string;
     quote_id?: string;
     lines?: { description: string; quantity: number; unit_price: number }[];
+    discount_amount?: number;
   }) =>
     api<import("@/types/commerce").Invoice>("/api/v1/invoices", {
       method: "POST",
