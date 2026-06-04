@@ -15,6 +15,7 @@ export function QuotesPage() {
   const [lines, setLines] = useState([
     { line_type: "labour", description: "", quantity: 1, unit_price: 0 },
   ]);
+  const [discount, setDiscount] = useState(0);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const qc = useQueryClient();
 
@@ -39,6 +40,7 @@ export function QuotesPage() {
       quotesApi.create({
         ticket_id: ticketId,
         lines: lines.filter((l) => l.description && l.unit_price >= 0),
+        discount_amount: discount,
       }),
     onSuccess: (q) => {
       refresh();

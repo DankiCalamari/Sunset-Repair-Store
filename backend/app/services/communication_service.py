@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import logging
 import re
 from app.services.smtp_service import send_email_message
 from app.services.imap_service import open_imap_connection
@@ -22,6 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.models.business import Business, BusinessSettings
 from app.models.customer import Customer
 from app.models.ticket import RepairTicket, TicketCommunication, UnassignedMessage
+
+logger = logging.getLogger(__name__)
 
 OPEN_STATUSES = {
     "new",
@@ -541,14 +544,30 @@ def _fetch_unread_imap(config: dict[str, Any]) -> list[dict[str, Any]]:
     conn = open_imap_connection(config)
     try:
         conn.login(username, password)
-        conn.select(mailbox)
-        _, data = conn.search(None, "UNSEEN")
+        status, _ = conn.select(mailbox, readonly=True)
+        if status != "OK":
+            raise RuntimeError(f"Could not open IMAP mailbox {mailbox}")
+        status, data = conn.search(None, "UNSEEN")
+        if status != "OK" or not data or not data[0]:
+            return []
         messages = []
         for num in data[0].split():
-            _, fetched = conn.fetch(num, "(RFC822)")
-            raw = fetched[0][1]
-            messages.append(parse_email_message(raw))
-            conn.store(num, "+FLAGS", "\\Seen")
+            try:
+                status, fetched = conn.fetch(num, "(RFC822)")
+                if status != "OK" or not fetched or not fetched[0]:
+                    continue
+                raw = fetched[0][1]
+                messages.append(parse_email_message(raw))
+            except Exception:
+                continue
+        # Mark all successfully fetched messages as seen
+        if messages:
+            try:
+                conn.select(mailbox, readonly=False)
+                for num in data[0].split()[: len(messages)]:
+                    conn.store(num, "+FLAGS", "\\Seen")
+            except Exception:
+                pass
         return messages
     finally:
         try:
@@ -566,18 +585,33 @@ async def poll_imap_once(session_factory: async_sessionmaker[AsyncSession]) -> N
             imap_config = email_settings.get("imap", {})
             if not imap_config.get("enabled"):
                 continue
-            messages = await asyncio.to_thread(_fetch_unread_imap, imap_config)
-            for message in messages:
-                await store_inbound_message(db, settings.business_id, channel="email", **message)
+            try:
+                messages = await asyncio.to_thread(_fetch_unread_imap, imap_config)
+                for message in messages:
+                    await store_inbound_message(db, settings.business_id, channel="email", **message)
+                if messages:
+                    logger.info(
+                        "IMAP poll: fetched %d message(s) for business %s",
+                        len(messages),
+                        settings.business_id,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "IMAP poll failed for business %s: %s",
+                    settings.business_id,
+                    exc,
+                )
         await db.commit()
 
 
 async def imap_poll_loop(session_factory: async_sessionmaker[AsyncSession]) -> None:
+    await asyncio.sleep(10)
+    logger.info("IMAP poll loop started")
     while True:
         try:
             await poll_imap_once(session_factory)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("IMAP poll loop error: %s", exc)
         await asyncio.sleep(120)
 
 

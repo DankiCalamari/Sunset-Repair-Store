@@ -261,8 +261,6 @@ export function AdminPage() {
           password: settingsForm.smtp_password,
           from_email: settingsForm.smtp_from_email,
           security: settingsForm.smtp_security,
-          tls_enabled: settingsForm.smtp_security === "starttls",
-          ssl_enabled: settingsForm.smtp_security === "ssl",
         },
         imap: {
           enabled: settingsForm.imap_enabled,
@@ -272,8 +270,6 @@ export function AdminPage() {
           password: settingsForm.imap_password,
           mailbox: settingsForm.imap_mailbox,
           security: settingsForm.imap_security,
-          ssl_enabled: settingsForm.imap_security === "ssl",
-          tls_enabled: settingsForm.imap_security === "starttls",
         },
         sms_gateway: {
           api_url: settingsForm.sms_api_url,
@@ -297,8 +293,6 @@ export function AdminPage() {
           password: settingsForm.smtp_password,
           from_email: settingsForm.smtp_from_email,
           security: settingsForm.smtp_security,
-          tls_enabled: settingsForm.smtp_security === "starttls",
-          ssl_enabled: settingsForm.smtp_security === "ssl",
         },
       }),
   });
@@ -313,8 +307,6 @@ export function AdminPage() {
           password: settingsForm.imap_password,
           mailbox: settingsForm.imap_mailbox,
           security: settingsForm.imap_security,
-          ssl_enabled: settingsForm.imap_security === "ssl",
-          tls_enabled: settingsForm.imap_security === "starttls",
         },
       }),
   });
