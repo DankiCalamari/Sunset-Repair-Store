@@ -29,10 +29,8 @@ export default defineConfig(({ mode }) => {
         },
       },
       hmr: {
-        host: "repairshop.sunsetcountry.repair",
-        port: 443,
-        protocol: "wss",
         clientPort: 443,
+        protocol: "wss",
       },
     },
   };
