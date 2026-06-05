@@ -43,6 +43,17 @@ SELECT id, email, full_name, role, is_active FROM users;
 SELECT id, name, slug FROM businesses;
 ```
 
+## Apply Non-Destructive Schema Updates
+
+If the API logs show `UndefinedColumnError` for columns that exist in `database/schema.sql`, your
+Docker database volume was created before the current schema. Apply the compatibility migration
+without deleting data:
+
+```bash
+docker compose exec db psql -U sunset -d sunset_erp -f /migrations/20260605_align_existing_database.sql
+docker compose restart api
+```
+
 ## After Reset
 
 Once the database is reset:
