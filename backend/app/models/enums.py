@@ -5,19 +5,23 @@ user_role_enum = ENUM(
     "manager",
     "technician",
     "sales",
-    "customer",
     name="user_role",
     create_type=False,
 )
 
+# Mobile repair workflow statuses
 ticket_status_enum = ENUM(
     "new",
+    "booked",
+    "travelling",
+    "collected",
     "diagnosing",
-    "waiting_approval",
-    "waiting_parts",
+    "awaiting_approval",
+    "awaiting_parts",
     "repairing",
     "testing",
-    "ready_for_pickup",
+    "ready_for_return",
+    "delivered",
     "completed",
     "cancelled",
     name="ticket_status",
@@ -69,5 +73,36 @@ appointment_status_enum = ENUM(
     "cancelled",
     "no_show",
     name="appointment_status",
+    create_type=False,
+)
+
+appointment_type_enum = ENUM(
+    "home_visit",
+    "business_visit",
+    "pickup",
+    "delivery",
+    name="appointment_type",
+    create_type=False,
+)
+
+photo_category_enum = ENUM(
+    "intake",
+    "diagnostic",
+    "repair",
+    "completion",
+    name="photo_category",
+    create_type=False,
+)
+
+condition_rating_enum = ENUM(
+    "excellent",
+    "good",
+    "damaged",
+    "working",
+    "not_working",
+    "triggered",
+    "not_triggered",
+    "unknown",
+    name="condition_rating",
     create_type=False,
 )

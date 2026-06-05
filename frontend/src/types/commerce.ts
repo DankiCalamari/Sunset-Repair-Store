@@ -9,15 +9,43 @@ export interface PaginatedResponse<T> {
 export interface Customer {
   id: string;
   business_id: string;
+  first_name: string;
+  last_name: string;
   name: string;
   email: string | null;
   phone: string | null;
   address_line1: string | null;
+  address_line2: string | null;
   city: string | null;
   state: string | null;
   postcode: string | null;
+  alt_address_line1: string | null;
+  alt_city: string | null;
+  alt_postcode: string | null;
+  gps_lat: string | null;
+  gps_lng: string | null;
+  gate_code: string | null;
+  property_notes: string | null;
+  contact_instructions: string | null;
   notes: string | null;
   is_active: boolean;
+  created_at: string;
+}
+
+export interface Device {
+  id: string;
+  business_id: string;
+  customer_id: string;
+  device_type: string;
+  manufacturer: string;
+  model: string;
+  colour: string | null;
+  imei: string | null;
+  serial_number: string | null;
+  passcode_provided: string | null;
+  accessories_received: string[];
+  warranty_status: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -87,11 +115,24 @@ export interface RepairTicket {
   ticket_number: string;
   customer_id: string;
   device_id: string;
+  customer_name?: string | null;
+  device_info?: string | null;
   issue_description: string;
   diagnostic_notes?: string | null;
   status: string;
   priority: string;
   assigned_technician_id?: string | null;
+  appointment_type?: string | null;
+  appointment_date?: string | null;
+  appointment_time?: string | null;
+  service_address_line1?: string | null;
+  service_city?: string | null;
+  service_postcode?: string | null;
+  gate_code?: string | null;
+  property_notes?: string | null;
+  contact_instructions?: string | null;
+  pickup_signature?: string | null;
+  return_signature?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -117,7 +158,7 @@ export interface TicketInternalNote {
 export interface TicketCommunication {
   id: string;
   ticket_id: string;
-  channel: "email" | "sms" | string;
+  channel: "email" | "sms" | "portal" | string;
   direction: "inbound" | "outbound" | string;
   message_type: string;
   status: string;
@@ -131,6 +172,43 @@ export interface TicketCommunication {
   in_reply_to: string | null;
   error_message: string | null;
   created_at: string;
+}
+
+export interface TicketPhoto {
+  id: string;
+  ticket_id: string;
+  category: string;
+  data_url: string;
+  caption: string | null;
+  created_at: string;
+}
+
+export interface DeviceConditionReport {
+  id: string;
+  ticket_id: string;
+  device_id: string;
+  screen_condition: string | null;
+  frame_condition: string | null;
+  rear_cover_condition: string | null;
+  camera_condition: string | null;
+  buttons_condition: string | null;
+  charging_port_condition: string | null;
+  water_damage_indicator: string | null;
+  existing_damage_notes: string | null;
+  created_at: string;
+}
+
+export interface TrackerStep {
+  key: string;
+  label: string;
+  completed: boolean;
+  current: boolean;
+}
+
+export interface TrackerResponse {
+  ticket_number: string;
+  status: string;
+  steps: TrackerStep[];
 }
 
 export interface InventoryItem {
@@ -215,14 +293,22 @@ export interface ServiceType {
 export interface Appointment {
   id: string;
   customer_id: string | null;
+  ticket_id: string | null;
   service_type_id: string;
   service_type_name: string | null;
+  appointment_type: string;
   scheduled_start: string;
   scheduled_end: string;
   status: string;
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
+  address_line1: string | null;
+  city: string | null;
+  postcode: string | null;
+  gate_code: string | null;
+  property_notes: string | null;
+  contact_instructions: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -351,3 +437,29 @@ export interface BusinessSettings {
   email_settings: Record<string, unknown>;
   sms_settings: Record<string, unknown>;
 }
+
+// Mobile repair workflow status config
+export const TICKET_STATUSES = [
+  "new", "booked", "travelling", "collected",
+  "diagnosing", "awaiting_approval", "awaiting_parts",
+  "repairing", "testing", "ready_for_return",
+  "delivered", "completed", "cancelled",
+] as const;
+
+export type TicketStatus = typeof TICKET_STATUSES[number];
+
+export const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  new: { label: "New", color: "#6b7280", bg: "#f3f4f6" },
+  booked: { label: "Booked", color: "#2563eb", bg: "#dbeafe" },
+  travelling: { label: "Travelling", color: "#7c3aed", bg: "#ede9fe" },
+  collected: { label: "Collected", color: "#0891b2", bg: "#cffafe" },
+  diagnosing: { label: "Diagnosing", color: "#d97706", bg: "#fef3c7" },
+  awaiting_approval: { label: "Awaiting Approval", color: "#ea580c", bg: "#ffedd5" },
+  awaiting_parts: { label: "Awaiting Parts", color: "#dc2626", bg: "#fee2e2" },
+  repairing: { label: "Repairing", color: "#4f46e5", bg: "#e0e7ff" },
+  testing: { label: "Testing", color: "#0d9488", bg: "#ccfbf1" },
+  ready_for_return: { label: "Ready For Return", color: "#16a34a", bg: "#dcfce7" },
+  delivered: { label: "Delivered", color: "#059669", bg: "#d1fae5" },
+  completed: { label: "Completed", color: "#15803d", bg: "#bbf7d0" },
+  cancelled: { label: "Cancelled", color: "#991b1b", bg: "#fecaca" },
+};

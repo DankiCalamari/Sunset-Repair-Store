@@ -6,7 +6,7 @@ import { useSettings } from "@/hooks/useSettings";
 export function Header() {
   const { user, logout } = useAuth();
   const branding = useSettings((s) => s.branding);
-  const displayName = branding.legal_name || branding.business_name;
+  const displayName = branding.legal_name || branding.business_name || "Sunset Country Repairs";
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">

@@ -30,7 +30,7 @@ const nav = [
 export function Sidebar() {
   const branding = useSettings((s) => s.branding);
   const logoSrc = branding.logo_data_url || branding.logo_url;
-  const displayName = branding.legal_name || branding.business_name;
+  const displayName = branding.legal_name || branding.business_name || "Sunset Country Repairs";
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:flex lg:flex-col">

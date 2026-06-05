@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Repair Shop ERP"
+    app_name: str = "Sunset Country Repairs"
     app_env: str = "production"
     app_debug: bool = False
     app_secret_key: str = "dev-secret-change-in-production-min-32-chars"

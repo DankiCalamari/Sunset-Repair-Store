@@ -3,7 +3,15 @@ from app.models.appointment import Appointment, ServiceType
 from app.models.customer import Customer, Device
 from app.models.inventory import InventoryCategory, InventoryItem, StockMovement, Supplier, PurchaseOrder, PurchaseOrderLine
 from app.models.pos import PosSale, PosSaleLine
-from app.models.ticket import RepairTicket, TicketCommunication, TicketTimeline, UnassignedMessage
+from app.models.ticket import (
+    RepairTicket,
+    TicketCommunication,
+    TicketTimeline,
+    TicketInternalNote,
+    TicketPhoto,
+    DeviceConditionReport,
+    UnassignedMessage,
+)
 
 __all__ = [
     "Appointment",
@@ -20,9 +28,12 @@ __all__ = [
     "PurchaseOrderLine",
     "RepairTicket",
     "TicketCommunication",
+    "TicketTimeline",
+    "TicketInternalNote",
+    "TicketPhoto",
+    "DeviceConditionReport",
     "ServiceType",
     "StockMovement",
     "Supplier",
-    "TicketTimeline",
     "UnassignedMessage",
 ]

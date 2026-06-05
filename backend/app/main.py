@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    description="Repair shop management ERP — multi-tenant ready",
+    description="Sunset Country Repairs — Mobile Phone, Tablet & Laptop Repair Management",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",

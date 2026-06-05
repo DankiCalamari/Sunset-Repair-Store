@@ -6,27 +6,51 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import conflict, not_found
 from app.models.business import BusinessSettings
 from app.models.ticket import RepairTicket, TicketTimeline
-from app.schemas.ticket import VALID_TRANSITIONS, TrackerResponse, TrackerStep
+from app.schemas.ticket import TrackerResponse, TrackerStep
 
+# Mobile repair workflow tracker steps
 TRACKER_STEPS = [
-    ("received", "Received", {"new"}),
-    ("diagnosing", "Diagnosing", {"diagnosing"}),
-    ("awaiting_approval", "Awaiting Approval", {"waiting_approval"}),
-    ("repairing", "Repairing", {"waiting_parts", "repairing"}),
-    ("testing", "Testing", {"testing"}),
-    ("ready", "Ready", {"ready_for_pickup"}),
+    ("booked", "Booking Confirmed", {"booked", "travelling", "collected", "diagnosing", "awaiting_approval", "awaiting_parts", "repairing", "testing", "ready_for_return", "delivered", "completed"}),
+    ("collected", "Device Collected", {"collected", "diagnosing", "awaiting_approval", "awaiting_parts", "repairing", "testing", "ready_for_return", "delivered", "completed"}),
+    ("diagnosing", "Diagnosing", {"diagnosing", "awaiting_approval", "awaiting_parts", "repairing", "testing", "ready_for_return", "delivered", "completed"}),
+    ("awaiting_approval", "Awaiting Approval", {"awaiting_approval", "awaiting_parts", "repairing", "testing", "ready_for_return", "delivered", "completed"}),
+    ("repairing", "Repairing", {"repairing", "testing", "ready_for_return", "delivered", "completed"}),
+    ("testing", "Testing", {"testing", "ready_for_return", "delivered", "completed"}),
+    ("ready", "Ready For Return", {"ready_for_return", "delivered", "completed"}),
+    ("delivered", "Delivered", {"delivered", "completed"}),
 ]
 
 STATUS_TO_TRACKER_INDEX = {
-    "new": 0,
-    "diagnosing": 1,
-    "waiting_approval": 2,
-    "waiting_parts": 3,
-    "repairing": 3,
-    "testing": 4,
-    "ready_for_pickup": 5,
-    "completed": 5,
+    "new": -1,
+    "booked": 0,
+    "travelling": 0,
+    "collected": 1,
+    "diagnosing": 2,
+    "awaiting_approval": 3,
+    "awaiting_parts": 3,
+    "repairing": 4,
+    "testing": 5,
+    "ready_for_return": 6,
+    "delivered": 7,
+    "completed": 7,
     "cancelled": -1,
+}
+
+# Valid status transitions for mobile repair workflow
+VALID_TRANSITIONS_MOBILE = {
+    "new": {"booked", "cancelled"},
+    "booked": {"travelling", "collected", "cancelled"},
+    "travelling": {"collected", "cancelled"},
+    "collected": {"diagnosing", "cancelled"},
+    "diagnosing": {"awaiting_approval", "awaiting_parts", "repairing", "cancelled"},
+    "awaiting_approval": {"awaiting_parts", "repairing", "cancelled"},
+    "awaiting_parts": {"repairing", "cancelled"},
+    "repairing": {"testing", "cancelled"},
+    "testing": {"ready_for_return", "cancelled"},
+    "ready_for_return": {"delivered", "cancelled"},
+    "delivered": {"completed", "cancelled"},
+    "completed": set(),
+    "cancelled": set(),
 }
 
 
@@ -35,7 +59,7 @@ async def generate_ticket_number(db: AsyncSession, business_id: UUID) -> str:
         select(BusinessSettings).where(BusinessSettings.business_id == business_id)
     )
     settings = result.scalar_one_or_none()
-    prefix = settings.ticket_prefix if settings else "SCT"
+    prefix = settings.ticket_prefix if settings else "SCR"
     seq = settings.next_ticket_seq if settings else 1
     if settings:
         await db.execute(
@@ -55,7 +79,7 @@ async def transition_status(
     note: str | None = None,
     customer_visible: bool = False,
 ) -> RepairTicket:
-    allowed = VALID_TRANSITIONS.get(ticket.status, set())
+    allowed = VALID_TRANSITIONS_MOBILE.get(ticket.status, set())
     if new_status not in allowed:
         raise conflict(
             f"Cannot transition from {ticket.status} to {new_status}",

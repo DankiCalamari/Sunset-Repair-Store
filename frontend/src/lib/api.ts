@@ -135,6 +135,12 @@ export const dashboardApi = {
       repairs_in_progress: number;
       devices_waiting_pickup: number;
       low_stock_count: number;
+      open_repairs: number;
+      awaiting_approval: number;
+      awaiting_parts: number;
+      ready_for_return: number;
+      todays_appointments: number;
+      revenue_this_month: number;
     }>("/api/v1/dashboard/summary"),
 };
 
@@ -162,9 +168,9 @@ export const customersApi = {
 };
 
 export const ticketsApi = {
-  list: (page = 1) =>
+  list: (page = 1, pageSize = 50) =>
     api<PaginatedResponse<import("@/types/commerce").RepairTicket>>(
-      `/api/v1/tickets?page=${page}&page_size=50`
+      `/api/v1/tickets?page=${page}&page_size=${pageSize}`
     ),
   get: (id: string) => api<import("@/types/commerce").RepairTicket>(`/api/v1/tickets/${id}`),
   create: (data: {
@@ -173,8 +179,16 @@ export const ticketsApi = {
     issue_description: string;
     priority?: string;
     customer_notes?: string;
+    appointment_type?: string;
+    appointment_date?: string;
+    appointment_time?: string;
   }) =>
     api<import("@/types/commerce").RepairTicket>("/api/v1/tickets", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateStatus: (id: string, data: { status: string; note?: string; customer_visible?: boolean }) =>
+    api<import("@/types/commerce").RepairTicket>(`/api/v1/tickets/${id}/status`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -189,10 +203,44 @@ export const ticketsApi = {
     }),
   communications: (id: string) =>
     api<import("@/types/commerce").TicketCommunication[]>(`/api/v1/tickets/${id}/communications`),
+  photos: (id: string) =>
+    api<import("@/types/commerce").TicketPhoto[]>(`/api/v1/tickets/${id}/photos`),
+  addPhoto: (id: string, data: { category: string; data_url: string; caption?: string }) =>
+    api<import("@/types/commerce").TicketPhoto>(`/api/v1/tickets/${id}/photos`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  conditionReport: (id: string) =>
+    api<import("@/types/commerce").DeviceConditionReport>(`/api/v1/tickets/${id}/condition-report`),
+  saveConditionReport: (id: string, data: Record<string, unknown>) =>
+    api<import("@/types/commerce").DeviceConditionReport>(`/api/v1/tickets/${id}/condition-report`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   template: (id: string, eventKey: string) =>
     api<{ subject: string; body_html: string }>(
       `/api/v1/tickets/${id}/communications/template/${eventKey}`
     ),
+  sendEmail: (
+    id: string,
+    data: {
+      to?: string;
+      subject: string;
+      body_html: string;
+      body_text?: string;
+      attachments?: { filename: string; content_type: string; content_base64: string }[];
+    }
+  ) =>
+    api<import("@/types/commerce").TicketCommunication>(
+      `/api/v1/tickets/${id}/communications/email`,
+      { method: "POST", body: JSON.stringify(data) }
+    ),
+  sendSms: (id: string, data: { to?: string; message: string }) =>
+    api<import("@/types/commerce").TicketCommunication>(
+      `/api/v1/tickets/${id}/communications/sms`,
+      { method: "POST", body: JSON.stringify(data) }
+    ),
+};
   sendEmail: (
     id: string,
     data: {

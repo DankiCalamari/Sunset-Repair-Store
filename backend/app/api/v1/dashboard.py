@@ -8,12 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, get_business_id, require_permission
 from app.core.permissions import Permission
 from app.db.session import get_db
+from app.models.appointment import Appointment
+from app.models.inventory import InventoryItem
 from app.models.ticket import RepairTicket
 from app.schemas.dashboard import DashboardSummary, TechnicianWorkload
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
-IN_PROGRESS = {"diagnosing", "waiting_approval", "waiting_parts", "repairing", "testing"}
+IN_PROGRESS = {
+    "new", "booked", "travelling", "collected",
+    "diagnosing", "awaiting_approval", "awaiting_parts",
+    "repairing", "testing", "ready_for_return",
+}
 
 
 @router.get("/summary", response_model=DashboardSummary)
@@ -24,6 +30,7 @@ async def dashboard_summary(
 ):
     today = date.today()
     start = datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)
+    month_start = start.replace(day=1)
 
     repairs_today = await db.scalar(
         select(func.count())
@@ -35,18 +42,52 @@ async def dashboard_summary(
         .select_from(RepairTicket)
         .where(RepairTicket.business_id == business_id, RepairTicket.status.in_(IN_PROGRESS))
     )
-    pickup = await db.scalar(
+    awaiting_approval = await db.scalar(
         select(func.count())
         .select_from(RepairTicket)
-        .where(RepairTicket.business_id == business_id, RepairTicket.status == "ready_for_pickup")
+        .where(RepairTicket.business_id == business_id, RepairTicket.status == "awaiting_approval")
+    )
+    awaiting_parts = await db.scalar(
+        select(func.count())
+        .select_from(RepairTicket)
+        .where(RepairTicket.business_id == business_id, RepairTicket.status == "awaiting_parts")
+    )
+    ready_for_return = await db.scalar(
+        select(func.count())
+        .select_from(RepairTicket)
+        .where(RepairTicket.business_id == business_id, RepairTicket.status == "ready_for_return")
+    )
+    todays_appointments = await db.scalar(
+        select(func.count())
+        .select_from(Appointment)
+        .where(
+            Appointment.business_id == business_id,
+            Appointment.scheduled_start >= start,
+            Appointment.scheduled_start < start.replace(day=start.day + 1),
+        )
+    )
+    low_stock = await db.scalar(
+        select(func.count())
+        .select_from(InventoryItem)
+        .where(
+            InventoryItem.business_id == business_id,
+            InventoryItem.quantity_on_hand <= InventoryItem.reorder_level,
+            InventoryItem.is_active == True,
+        )
     )
 
     return DashboardSummary(
         repairs_today=repairs_today or 0,
         revenue_today=0.0,
+        revenue_this_month=0.0,
         repairs_in_progress=in_progress or 0,
-        devices_waiting_pickup=pickup or 0,
-        low_stock_count=0,
+        open_repairs=in_progress or 0,
+        devices_waiting_pickup=ready_for_return or 0,
+        awaiting_approval=awaiting_approval or 0,
+        awaiting_parts=awaiting_parts or 0,
+        ready_for_return=ready_for_return or 0,
+        todays_appointments=todays_appointments or 0,
+        low_stock_count=low_stock or 0,
     )
 
 

@@ -57,7 +57,7 @@ export function SetupPage() {
     // Settings
     timezone: "Australia/Melbourne",
     currency: "AUD",
-    ticket_prefix: "RCT",
+    ticket_prefix: "SCR",
     tax_rate: "10",
     // Owner
     owner_name: "",
@@ -152,7 +152,7 @@ export function SetupPage() {
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-xl bg-accent" />
           <h1 className="text-2xl font-bold text-white">Welcome</h1>
-          <p className="text-slate-400">Let's get your repair shop set up.</p>
+          <p className="text-slate-400">Let's get Sunset Country Repairs set up.</p>
         </div>
 
         {/* Step indicators */}
@@ -197,7 +197,7 @@ export function SetupPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">Business name *</label>
                 <Input
-                  placeholder="e.g. Sunset Country Tech"
+                  placeholder="e.g. Sunset Country Repairs"
                   value={form.business_name}
                   onChange={(e) => {
                     const name = e.target.value;
@@ -225,7 +225,7 @@ export function SetupPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">Legal name</label>
                 <Input
-                  placeholder="e.g. Sunset Country Tech Pty Ltd"
+                  placeholder="e.g. Sunset Country Repairs Pty Ltd"
                   value={form.legal_name}
                   onChange={f("legal_name")}
                 />

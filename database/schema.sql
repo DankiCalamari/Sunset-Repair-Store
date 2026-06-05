@@ -1,6 +1,6 @@
--- Sunset Country Tech ERP — PostgreSQL Schema
--- Multi-tenant ready: all business data scoped by business_id
--- Version: 1.0.0
+-- Sunset Country Repairs — PostgreSQL Schema
+-- Mobile repair management for Mildura, Victoria
+-- Version: 2.0.0
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
@@ -10,12 +10,14 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- =============================================================================
 
 CREATE TYPE user_role AS ENUM (
-  'owner', 'manager', 'technician', 'sales', 'customer'
+  'owner', 'manager', 'technician', 'sales'
 );
 
 CREATE TYPE ticket_status AS ENUM (
-  'new', 'diagnosing', 'waiting_approval', 'waiting_parts',
-  'repairing', 'testing', 'ready_for_pickup', 'completed', 'cancelled'
+  'new', 'booked', 'travelling', 'collected',
+  'diagnosing', 'awaiting_approval', 'awaiting_parts',
+  'repairing', 'testing', 'ready_for_return',
+  'delivered', 'completed', 'cancelled'
 );
 
 CREATE TYPE ticket_priority AS ENUM ('low', 'normal', 'high', 'urgent');
@@ -26,29 +28,27 @@ CREATE TYPE invoice_status AS ENUM ('draft', 'sent', 'partial', 'paid', 'void', 
 
 CREATE TYPE payment_method AS ENUM ('cash', 'card', 'bank_transfer');
 
-CREATE TYPE photo_stage AS ENUM ('before', 'during', 'after');
-
-CREATE TYPE notification_channel AS ENUM ('email', 'sms');
-
-CREATE TYPE notification_trigger AS ENUM (
-  'ticket_created', 'quote_ready', 'quote_approved',
-  'device_ready', 'warranty_expiring', 'appointment_reminder'
-);
-
 CREATE TYPE appointment_status AS ENUM ('scheduled', 'confirmed', 'completed', 'cancelled', 'no_show');
+
+CREATE TYPE appointment_type AS ENUM ('home_visit', 'business_visit', 'pickup', 'delivery');
+
+CREATE TYPE photo_category AS ENUM ('intake', 'diagnostic', 'repair', 'completion');
+
+CREATE TYPE condition_rating AS ENUM (
+  'excellent', 'good', 'damaged', 'working', 'not_working',
+  'triggered', 'not_triggered', 'unknown'
+);
 
 CREATE TYPE po_status AS ENUM ('draft', 'ordered', 'partial', 'received', 'cancelled');
 
-CREATE TYPE warranty_claim_status AS ENUM ('submitted', 'reviewing', 'approved', 'rejected', 'resolved');
-
 -- =============================================================================
--- TENANCY & AUTH
+-- BUSINESS & AUTH
 -- =============================================================================
 
 CREATE TABLE businesses (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name            VARCHAR(255) NOT NULL,
-  slug            VARCHAR(100) NOT NULL UNIQUE,
+  name            VARCHAR(255) NOT NULL DEFAULT 'Sunset Country Repairs',
+  slug            VARCHAR(100) NOT NULL UNIQUE DEFAULT 'sunset-country-repairs',
   legal_name      VARCHAR(255),
   abn             VARCHAR(20),
   email           VARCHAR(255),
@@ -110,7 +110,7 @@ CREATE TABLE business_settings (
   email_settings        JSONB DEFAULT '{}',
   sms_settings          JSONB DEFAULT '{}',
   tax_rate              DECIMAL(5,4) DEFAULT 0.1000,
-  ticket_prefix         VARCHAR(10) DEFAULT 'RCT',
+  ticket_prefix         VARCHAR(10) DEFAULT 'SCR',
   next_ticket_seq       INTEGER NOT NULL DEFAULT 1,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -132,42 +132,58 @@ CREATE INDEX idx_setup_verification_email ON setup_verification_codes(email, exp
 -- =============================================================================
 
 CREATE TABLE customers (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
-  name            VARCHAR(255) NOT NULL,
-  email           VARCHAR(255),
-  phone           VARCHAR(50),
-  address_line1   VARCHAR(255),
-  address_line2   VARCHAR(255),
-  city            VARCHAR(100),
-  state           VARCHAR(50),
-  postcode        VARCHAR(20),
-  notes           TEXT,
-  is_active       BOOLEAN NOT NULL DEFAULT true,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  business_id       UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  first_name        VARCHAR(120) NOT NULL,
+  last_name         VARCHAR(120) NOT NULL,
+  email             VARCHAR(255),
+  phone             VARCHAR(50),
+  -- Primary service address
+  address_line1     VARCHAR(255),
+  address_line2     VARCHAR(255),
+  city              VARCHAR(100),
+  state             VARCHAR(50),
+  postcode          VARCHAR(20),
+  -- Alternate address
+  alt_address_line1 VARCHAR(255),
+  alt_address_line2 VARCHAR(255),
+  alt_city          VARCHAR(100),
+  alt_state         VARCHAR(50),
+  alt_postcode      VARCHAR(20),
+  -- GPS coordinates
+  gps_lat           VARCHAR(20),
+  gps_lng           VARCHAR(20),
+  -- Property access
+  gate_code         VARCHAR(50),
+  property_notes    TEXT,
+  contact_instructions TEXT,
+  notes             TEXT,
+  is_active         BOOLEAN NOT NULL DEFAULT true,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_customers_business ON customers(business_id);
-CREATE INDEX idx_customers_name ON customers(business_id, name);
+CREATE INDEX idx_customers_name ON customers(business_id, last_name, first_name);
 CREATE INDEX idx_customers_email ON customers(email) WHERE email IS NOT NULL;
 CREATE INDEX idx_customers_phone ON customers(phone) WHERE phone IS NOT NULL;
 
 CREATE TABLE devices (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  customer_id     UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-  manufacturer    VARCHAR(100) NOT NULL,
-  model           VARCHAR(150) NOT NULL,
-  imei            VARCHAR(20),
-  serial_number   VARCHAR(100),
-  colour          VARCHAR(50),
-  passcode_provided VARCHAR(100),
-  purchase_date   DATE,
-  notes           TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  business_id         UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  customer_id         UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  device_type         VARCHAR(50) NOT NULL DEFAULT 'mobile_phone',
+  manufacturer        VARCHAR(100) NOT NULL,
+  model               VARCHAR(150) NOT NULL,
+  colour              VARCHAR(50),
+  imei                VARCHAR(20),
+  serial_number       VARCHAR(100),
+  passcode_provided   VARCHAR(100),
+  accessories_received JSONB DEFAULT '[]',
+  warranty_status     VARCHAR(50),
+  purchase_date       DATE,
+  notes               TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_devices_customer ON devices(customer_id);
@@ -178,24 +194,46 @@ CREATE INDEX idx_devices_imei ON devices(imei) WHERE imei IS NOT NULL;
 -- =============================================================================
 
 CREATE TABLE repair_tickets (
-  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id         UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  ticket_number       VARCHAR(30) NOT NULL,
-  customer_id         UUID NOT NULL REFERENCES customers(id),
-  device_id           UUID NOT NULL REFERENCES devices(id),
+  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  business_id           UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  ticket_number         VARCHAR(30) NOT NULL,
+  customer_id           UUID NOT NULL REFERENCES customers(id),
+  device_id             UUID NOT NULL REFERENCES devices(id),
   assigned_technician_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  issue_description   TEXT NOT NULL,
-  diagnostic_notes    TEXT,
-  priority            ticket_priority NOT NULL DEFAULT 'normal',
-  status              ticket_status NOT NULL DEFAULT 'new',
-  customer_notes      TEXT,
-  estimated_completion TIMESTAMPTZ,
-  completed_at        TIMESTAMPTZ,
-  cancelled_at        TIMESTAMPTZ,
-  cancel_reason       TEXT,
-  created_by_id       UUID REFERENCES users(id),
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  issue_description     TEXT NOT NULL,
+  diagnostic_notes      TEXT,
+  priority              ticket_priority NOT NULL DEFAULT 'normal',
+  status                ticket_status NOT NULL DEFAULT 'new',
+  customer_notes        TEXT,
+  -- Service address (snapshot at booking)
+  service_address_line1 VARCHAR(255),
+  service_address_line2 VARCHAR(255),
+  service_city          VARCHAR(100),
+  service_state         VARCHAR(50),
+  service_postcode      VARCHAR(20),
+  service_gps_lat       VARCHAR(20),
+  service_gps_lng       VARCHAR(20),
+  gate_code             VARCHAR(50),
+  property_notes        TEXT,
+  contact_instructions  TEXT,
+  -- Appointment
+  appointment_type      appointment_type,
+  appointment_date      TIMESTAMPTZ,
+  appointment_time      VARCHAR(10),
+  -- Signatures (base64 images)
+  pickup_signature      TEXT,
+  return_signature      TEXT,
+  -- Receipts (base64 PDFs)
+  pickup_receipt_pdf    TEXT,
+  return_receipt_pdf    TEXT,
+  -- Timestamps
+  estimated_completion  TIMESTAMPTZ,
+  completed_at          TIMESTAMPTZ,
+  cancelled_at          TIMESTAMPTZ,
+  cancel_reason         TEXT,
+  created_by_id         UUID REFERENCES users(id),
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (business_id, ticket_number)
 );
 
@@ -228,12 +266,29 @@ CREATE TABLE ticket_internal_notes (
 CREATE TABLE ticket_photos (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   ticket_id       UUID NOT NULL REFERENCES repair_tickets(id) ON DELETE CASCADE,
-  storage_key     TEXT NOT NULL,
-  url             TEXT NOT NULL,
-  stage           photo_stage NOT NULL,
+  category        photo_category NOT NULL DEFAULT 'intake',
+  data_url        TEXT NOT NULL,
   caption         VARCHAR(255),
-  uploaded_by_id  UUID REFERENCES users(id),
+  created_by_id   UUID REFERENCES users(id),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_photos_ticket ON ticket_photos(ticket_id, category);
+
+CREATE TABLE device_condition_reports (
+  id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ticket_id               UUID NOT NULL REFERENCES repair_tickets(id) ON DELETE CASCADE,
+  device_id               UUID NOT NULL REFERENCES devices(id),
+  screen_condition        condition_rating,
+  frame_condition         condition_rating,
+  rear_cover_condition    condition_rating,
+  camera_condition        condition_rating,
+  buttons_condition       condition_rating,
+  charging_port_condition condition_rating,
+  water_damage_indicator  condition_rating,
+  existing_damage_notes   TEXT,
+  created_by_id           UUID REFERENCES users(id),
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- =============================================================================
@@ -272,7 +327,7 @@ CREATE TABLE quotation_lines (
 );
 
 -- =============================================================================
--- INVENTORY
+-- INVENTORY (simplified)
 -- =============================================================================
 
 CREATE TABLE suppliers (
@@ -395,46 +450,6 @@ CREATE TABLE payments (
   created_by_id   UUID REFERENCES users(id)
 );
 
-CREATE TABLE refunds (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  payment_id      UUID NOT NULL REFERENCES payments(id),
-  amount          DECIMAL(12,2) NOT NULL,
-  reason          TEXT,
-  refunded_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by_id   UUID REFERENCES users(id)
-);
-
--- =============================================================================
--- WARRANTY
--- =============================================================================
-
-CREATE TABLE warranties (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  ticket_id       UUID NOT NULL REFERENCES repair_tickets(id),
-  customer_id     UUID NOT NULL REFERENCES customers(id),
-  device_id       UUID NOT NULL REFERENCES devices(id),
-  start_date      DATE NOT NULL,
-  end_date        DATE NOT NULL,
-  covered_components TEXT NOT NULL,
-  notes           TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_warranties_expiry ON warranties(business_id, end_date);
-
-CREATE TABLE warranty_claims (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  warranty_id     UUID NOT NULL REFERENCES warranties(id),
-  customer_id     UUID NOT NULL REFERENCES customers(id),
-  description     TEXT NOT NULL,
-  status          warranty_claim_status NOT NULL DEFAULT 'submitted',
-  resolution_notes TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- =============================================================================
 -- APPOINTMENTS
 -- =============================================================================
@@ -451,30 +466,41 @@ CREATE TABLE service_types (
 CREATE TABLE appointments (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  ticket_id       UUID REFERENCES repair_tickets(id),
   customer_id     UUID REFERENCES customers(id),
-  service_type_id UUID NOT NULL REFERENCES service_types(id),
+  service_type_id UUID REFERENCES service_types(id),
+  appointment_type appointment_type NOT NULL DEFAULT 'home_visit',
   scheduled_start TIMESTAMPTZ NOT NULL,
   scheduled_end   TIMESTAMPTZ NOT NULL,
   status          appointment_status NOT NULL DEFAULT 'scheduled',
-  customer_name   VARCHAR(255),
-  customer_email  VARCHAR(255),
-  customer_phone  VARCHAR(50),
+  -- Service address snapshot
+  address_line1   VARCHAR(255),
+  address_line2   VARCHAR(255),
+  city            VARCHAR(100),
+  state           VARCHAR(50),
+  postcode        VARCHAR(20),
+  gps_lat         VARCHAR(20),
+  gps_lng         VARCHAR(20),
+  gate_code       VARCHAR(50),
+  property_notes  TEXT,
+  contact_instructions TEXT,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_appointments_schedule ON appointments(business_id, scheduled_start);
+CREATE INDEX idx_appointments_ticket ON appointments(ticket_id);
 
 -- =============================================================================
--- TICKET COMMUNICATIONS
+-- COMMUNICATIONS
 -- =============================================================================
 
 CREATE TABLE ticket_communications (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   ticket_id       UUID NOT NULL REFERENCES repair_tickets(id) ON DELETE CASCADE,
-  channel         VARCHAR(20) NOT NULL CHECK (channel IN ('email', 'sms', 'system')),
+  channel         VARCHAR(20) NOT NULL CHECK (channel IN ('email', 'sms', 'portal', 'system')),
   direction       VARCHAR(20) NOT NULL CHECK (direction IN ('inbound', 'outbound', 'system')),
   message_type    VARCHAR(50) NOT NULL DEFAULT 'message',
   status          VARCHAR(30) NOT NULL DEFAULT 'stored',
@@ -537,38 +563,6 @@ CREATE TABLE pos_sale_lines (
 );
 
 -- =============================================================================
--- NOTIFICATIONS
--- =============================================================================
-
-CREATE TABLE notification_templates (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  trigger         notification_trigger NOT NULL,
-  channel         notification_channel NOT NULL,
-  subject         VARCHAR(255),
-  body_template   TEXT NOT NULL,
-  is_active       BOOLEAN NOT NULL DEFAULT true,
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (business_id, trigger, channel)
-);
-
-CREATE TABLE notification_log (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-  recipient       VARCHAR(255) NOT NULL,
-  channel         notification_channel NOT NULL,
-  trigger         notification_trigger,
-  subject         VARCHAR(255),
-  body            TEXT,
-  status          VARCHAR(20) NOT NULL DEFAULT 'pending',
-  sent_at         TIMESTAMPTZ,
-  error_message   TEXT,
-  reference_type  VARCHAR(50),
-  reference_id    UUID,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- =============================================================================
 -- ACTIVITY & AUDIT
 -- =============================================================================
 
@@ -602,8 +596,6 @@ CREATE TRIGGER trg_businesses_updated BEFORE UPDATE ON businesses
 CREATE TRIGGER trg_users_updated BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_customers_updated BEFORE UPDATE ON customers
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_devices_updated BEFORE UPDATE ON devices
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_tickets_updated BEFORE UPDATE ON repair_tickets
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
