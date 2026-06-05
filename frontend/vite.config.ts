@@ -16,13 +16,23 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      host: true,
-      allowedHosts: ["repairshop.sunsetcountry.repair"],
+      host: "0.0.0.0",
+      allowedHosts: [
+        "repairshop.sunsetcountry.repair",
+        "localhost",
+        ".sunsetcountry.repair",
+      ],
       proxy: {
         "/api": {
           target: apiTarget,
           changeOrigin: true,
         },
+      },
+      hmr: {
+        host: "repairshop.sunsetcountry.repair",
+        port: 443,
+        protocol: "wss",
+        clientPort: 443,
       },
     },
   };
