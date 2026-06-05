@@ -241,26 +241,6 @@ export const ticketsApi = {
       { method: "POST", body: JSON.stringify(data) }
     ),
 };
-  sendEmail: (
-    id: string,
-    data: {
-      to?: string;
-      subject: string;
-      body_html: string;
-      body_text?: string;
-      attachments?: { filename: string; content_type: string; content_base64: string }[];
-    }
-  ) =>
-    api<import("@/types/commerce").TicketCommunication>(
-      `/api/v1/tickets/${id}/communications/email`,
-      { method: "POST", body: JSON.stringify(data) }
-    ),
-  sendSms: (id: string, data: { to?: string; message: string }) =>
-    api<import("@/types/commerce").TicketCommunication>(
-      `/api/v1/tickets/${id}/communications/sms`,
-      { method: "POST", body: JSON.stringify(data) }
-    ),
-};
 
 export const quotesApi = {
   list: (status?: string, page = 1) =>
