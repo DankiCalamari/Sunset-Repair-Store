@@ -13,7 +13,7 @@ export function CustomersPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", notes: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", city: "", notes: "" });
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -26,7 +26,7 @@ export function CustomersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customers"] });
       setShowForm(false);
-      setForm({ name: "", email: "", phone: "", city: "", notes: "" });
+      setForm({ first_name: "", last_name: "", email: "", phone: "", city: "", notes: "" });
     },
   });
 
@@ -97,7 +97,7 @@ export function CustomersPage() {
                   <User className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium">{c.name}</p>
+                  <p className="font-medium">{c.first_name} {c.last_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.phone || c.email}</p>
                 </div>
               </button>
@@ -112,7 +112,7 @@ export function CustomersPage() {
           {selected ? (
             <>
               <CardHeader>
-                <CardTitle>{selected.name}</CardTitle>
+                <CardTitle>{selected.first_name} {selected.last_name}</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   {[selected.phone, selected.email, selected.city].filter(Boolean).join(" · ")}
                 </p>
@@ -189,14 +189,17 @@ export function CustomersPage() {
               <CardTitle>New customer</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Input placeholder="Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="First name *" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+                <Input placeholder="Last name *" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+              </div>
               <Input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               <Input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
               <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-                <Button variant="accent" disabled={!form.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
+                <Button variant="accent" disabled={!form.first_name || createMutation.isPending} onClick={() => createMutation.mutate()}>
                   Save
                 </Button>
               </div>
