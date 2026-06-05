@@ -21,6 +21,10 @@ from app.core.exceptions import not_found
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
 
+def _customer_full_name():
+    return func.concat(Customer.first_name, " ", Customer.last_name)
+
+
 @router.get("", response_model=PaginatedResponse[CustomerResponse])
 async def list_customers(
     q: str | None = None,
@@ -34,12 +38,18 @@ async def list_customers(
     if q:
         pattern = f"%{q}%"
         base = base.where(
-            or_(Customer.name.ilike(pattern), Customer.email.ilike(pattern), Customer.phone.ilike(pattern))
+            or_(
+                Customer.first_name.ilike(pattern),
+                Customer.last_name.ilike(pattern),
+                _customer_full_name().ilike(pattern),
+                Customer.email.ilike(pattern),
+                Customer.phone.ilike(pattern),
+            )
         )
     total_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = total_result.scalar() or 0
     result = await db.execute(
-        base.order_by(Customer.name).offset((page - 1) * page_size).limit(page_size)
+        base.order_by(Customer.last_name, Customer.first_name).offset((page - 1) * page_size).limit(page_size)
     )
     items = [CustomerResponse.model_validate(c) for c in result.scalars().all()]
     pages = max(1, (total + page_size - 1) // page_size)
