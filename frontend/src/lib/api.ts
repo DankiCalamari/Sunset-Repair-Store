@@ -3,6 +3,11 @@ import type { User } from "@/types";
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 const buildUrl = (path: string) => {
+  // If API_BASE is empty, use relative path (Vite proxy handles /api)
+  if (!API_BASE) {
+    return path.startsWith("/") ? path : `/${path}`;
+  }
+  
   const base = API_BASE.replace(/\/+$/g, "");
   let normalizedPath = path;
   if (base.endsWith("/api") && normalizedPath.startsWith("/api")) {
