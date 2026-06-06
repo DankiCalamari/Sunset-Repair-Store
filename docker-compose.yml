@@ -45,10 +45,12 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://sunset:sunset_dev_password@db:5432/sunset_erp}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      CORS_ORIGINS: "*"
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-}
     networks:
       - app_network
+    ports:
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -58,21 +60,7 @@ services:
         condition: service_started
     volumes:
       - ./backend/app:/app/app:ro
-
-  api-gateway:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.api-gateway
-    env_file:
-      - .env
-    environment:
-      - API_GATEWAY_SECRET=${API_GATEWAY_SECRET:-}
-    networks:
-      - app_network
-    ports:
-      - "8080:8080"
-    depends_on:
-      - api
+    restart: unless-stopped
 
   frontend:
     build:
@@ -80,14 +68,13 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-/api}
     networks:
       - app_network
     depends_on:
-      - api-gateway
+      - api
     ports:
       - "5173:80"
+    restart: unless-stopped
 
   public-website:
     build:
@@ -96,7 +83,7 @@ services:
     env_file:
       - .env
     environment:
-      VITE_API_URL: ${PUBLIC_API_URL:-http://api-gateway:8080/api}
+      VITE_API_URL: http://api:8000/api
       VITE_PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
     networks:
       - app_network
