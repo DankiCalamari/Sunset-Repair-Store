@@ -3,6 +3,11 @@ import { api } from "@/lib/api";
 export const setupApi = {
   status: () =>
     api<{ needs_setup: boolean }>("/api/v1/setup/status"),
+  sendVerificationCode: (owner_email: string) =>
+    api<{ code_sent: boolean; debug_code?: string }>("/api/v1/setup/verification", {
+      method: "POST",
+      body: JSON.stringify({ owner_email }),
+    }),
   run: (data: {
     business_name: string;
     business_slug: string;
@@ -21,6 +26,7 @@ export const setupApi = {
     owner_name: string;
     owner_email: string;
     owner_password: string;
+    verification_code?: string;
   }) =>
     api<{
       access_token: string;

@@ -7,7 +7,7 @@ const buildUrl = (path: string) => {
   if (!API_BASE) {
     return path.startsWith("/") ? path : `/${path}`;
   }
-  
+
   const base = API_BASE.replace(/\/+$/g, "");
   let normalizedPath = path;
   if (base.endsWith("/api") && normalizedPath.startsWith("/api")) {
@@ -15,16 +15,6 @@ const buildUrl = (path: string) => {
   }
   return `${base}${normalizedPath}`;
 };
-
-export type ApiError = { detail: string; code?: string };
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  pages: number;
-}
 
 function getToken(): string | null {
   return localStorage.getItem("access_token");
@@ -57,7 +47,7 @@ export async function downloadFile(path: string, filename: string) {
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
+    ...((options.headers as Record<string, string>) || {}),
   };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -151,7 +141,7 @@ export const dashboardApi = {
 
 export const customersApi = {
   list: (q?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").Customer>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").Customer>>(
       `/api/v1/customers?q=${encodeURIComponent(q || "")}&page=${page}`
     ),
   create: (data: Partial<import("@/types/commerce").Customer>) =>
@@ -174,7 +164,7 @@ export const customersApi = {
 
 export const ticketsApi = {
   list: (page = 1, pageSize = 50) =>
-    api<PaginatedResponse<import("@/types/commerce").RepairTicket>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").RepairTicket>>(
       `/api/v1/tickets?page=${page}&page_size=${pageSize}`
     ),
   get: (id: string) => api<import("@/types/commerce").RepairTicket>(`/api/v1/tickets/${id}`),
@@ -249,7 +239,7 @@ export const ticketsApi = {
 
 export const quotesApi = {
   list: (status?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").Quote>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").Quote>>(
       `/api/v1/quotes?${status ? `status=${status}&` : ""}page=${page}`
     ),
   get: (id: string) => api<import("@/types/commerce").Quote>(`/api/v1/quotes/${id}`),
@@ -276,7 +266,7 @@ export const quotesApi = {
 
 export const invoicesApi = {
   list: (status?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").Invoice>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").Invoice>>(
       `/api/v1/invoices?${status ? `status=${status}&` : ""}page=${page}`
     ),
   get: (id: string) => api<import("@/types/commerce").Invoice>(`/api/v1/invoices/${id}`),
@@ -300,9 +290,8 @@ export const invoicesApi = {
 };
 
 export const inventoryApi = {
-  // Items
   list: (q?: string, page = 1, lowStock = false, categoryId?: string) =>
-    api<PaginatedResponse<import("@/types/commerce").InventoryItem>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").InventoryItem>>(
       `/api/v1/inventory/items?q=${encodeURIComponent(q || "")}&page=${page}&page_size=100${lowStock ? "&low_stock=true" : ""}${categoryId ? `&category_id=${categoryId}` : ""}`
     ),
   get: (id: string) =>
@@ -353,7 +342,6 @@ export const inventoryApi = {
   movements: (id: string) =>
     api<import("@/types/commerce").StockMovement[]>(`/api/v1/inventory/items/${id}/movements`),
 
-  // Categories
   categories: () =>
     api<import("@/types/commerce").InventoryCategory[]>("/api/v1/inventory/categories"),
   createCategory: (data: { name: string; slug: string }) =>
@@ -369,9 +357,8 @@ export const inventoryApi = {
   deleteCategory: (id: string) =>
     api<void>(`/api/v1/inventory/categories/${id}`, { method: "DELETE" }),
 
-  // Suppliers
   suppliers: (q?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").Supplier>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").Supplier>>(
       `/api/v1/inventory/suppliers?q=${encodeURIComponent(q || "")}&page=${page}`
     ),
   createSupplier: (data: {
@@ -396,9 +383,8 @@ export const inventoryApi = {
   deleteSupplier: (id: string) =>
     api<void>(`/api/v1/inventory/suppliers/${id}`, { method: "DELETE" }),
 
-  // Purchase Orders
   purchaseOrders: (status?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").PurchaseOrder>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").PurchaseOrder>>(
       `/api/v1/inventory/purchase-orders?${status ? `status=${status}&` : ""}page=${page}`
     ),
   getPurchaseOrder: (id: string) =>
@@ -429,7 +415,7 @@ export const inventoryApi = {
 export const appointmentsApi = {
   serviceTypes: () => api<import("@/types/commerce").ServiceType[]>("/api/v1/service-types"),
   list: (status?: string, page = 1) =>
-    api<PaginatedResponse<import("@/types/commerce").Appointment>>(
+    api<import("@/types/commerce").PaginatedResponse<import("@/types/commerce").Appointment>>(
       `/api/v1/appointments?${status ? `status=${status}&` : ""}page=${page}&page_size=100`
     ),
   create: (data: {
@@ -464,22 +450,9 @@ export const posApi = {
     }),
 };
 
-export interface Device {
-  id: string;
-  business_id: string;
-  customer_id: string;
-  manufacturer: string;
-  model: string;
-  imei: string | null;
-  serial_number: string | null;
-  colour: string | null;
-  passcode_provided: string | null;
-  notes: string | null;
-}
-
 export const devicesApi = {
   byCustomer: (customerId: string) =>
-    api<Device[]>(`/api/v1/devices/by-customer/${customerId}`),
+    api<import("@/types/commerce").Device[]>(`/api/v1/devices/by-customer/${customerId}`),
   create: (data: {
     customer_id: string;
     manufacturer: string;
@@ -490,7 +463,7 @@ export const devicesApi = {
     passcode_provided?: string;
     notes?: string;
   }) =>
-    api<Device>("/api/v1/devices", {
+    api<import("@/types/commerce").Device>("/api/v1/devices", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -553,6 +526,8 @@ export const adminApi = {
       sms_gateway: Record<string, unknown>;
       automations: Record<string, unknown>;
       branding: Record<string, unknown>;
+      quote_template: Record<string, unknown>;
+      invoice_template: Record<string, unknown>;
     }>
   ) =>
     api<import("@/types/commerce").BusinessSettings>("/api/v1/admin/settings", {

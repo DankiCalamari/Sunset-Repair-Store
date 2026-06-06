@@ -1,10 +1,45 @@
 from functools import lru_cache
+import os
+from pathlib import Path
+from typing import Any
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Determine the project root directory (parent of backend/)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+
+def _load_env_secret(name: str, default: str | None = None) -> str | None:
+    """Load secret from environment or .env file at project root."""
+    value = os.getenv(name)
+    if value:
+        return value
+
+    env_file = PROJECT_ROOT / ".env"
+    if env_file.exists():
+        try:
+            with open(env_file, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or not line:
+                        continue
+                    if "=" in line:
+                        key, val = line.split("=", 1)
+                        if key.strip() == name:
+                            return val.strip()
+        except Exception:
+            pass
+
+    return default
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=str(PROJECT_ROOT / ".env"),
+        extra="ignore",
+    )
 
     app_name: str = "Sunset Country Repairs"
     app_env: str = "production"
@@ -28,29 +63,22 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = "http://localhost:5173,http://localhost:3000,https://sunsetcountry.repair,https://www.sunsetcountry.repair,https://repairshop.sunsetcountry.repair"
 
-    smtp_host: str | None = None
-    smtp_port: int = 587
-    smtp_username: str | None = None
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    smtp_from_email: str | None = None
-    smtp_from: str | None = None
-    smtp_tls: bool = True
-    smtp_use_ssl: bool = False
+    api_gateway_secret: str | None = None
+
+    @field_validator("api_gateway_secret", mode="before")
+    @classmethod
+    def _load_api_gateway_secret(cls, v: Any) -> str | None:
+        if v is not None and v != "":
+            return v
+        return _load_env_secret("API_GATEWAY_SECRET")
+
+    @property
+    def get_database_url(self) -> str:
+        return self.database_url
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
-    
-    @property
-    def get_database_url(self) -> str:
-        """Normalize the database URL for asyncpg compatibility."""
-        url = self.database_url
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-        elif url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return url
 
 
 @lru_cache

@@ -29,7 +29,7 @@ export const useAuth = create<AuthState>((set) => ({
   loginDirect: (accessToken, refreshToken, user) => {
     localStorage.setItem("access_token", accessToken);
     localStorage.setItem("refresh_token", refreshToken);
-    set({ user: user as User });
+    set({ user });
   },
   logout: () => {
     localStorage.removeItem("access_token");
@@ -44,6 +44,7 @@ export const useAuth = create<AuthState>((set) => ({
       set({ user: user as User });
     } catch {
       localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
     }
   },
 }));

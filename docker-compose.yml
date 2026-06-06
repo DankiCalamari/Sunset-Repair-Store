@@ -40,10 +40,9 @@ services:
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-}
     networks:
       - app_network
-    # API is internal only - NOT exposed to public
-    # Only accessible via frontend proxy or from within local network
     depends_on:
       db:
         condition: service_healthy
@@ -53,6 +52,21 @@ services:
         condition: service_started
     volumes:
       - ./backend/app:/app/app:ro
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api-gateway
+    env_file:
+      - .env
+    environment:
+      - API_GATEWAY_SECRET=${API_GATEWAY_SECRET:-}
+    networks:
+      - app_network
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
 
   frontend:
     build:
@@ -65,8 +79,7 @@ services:
     networks:
       - app_network
     depends_on:
-      - api
-    # Frontend accessible via NPM on port 443
+      - api-gateway
     ports:
       - "5173:5173"
 
@@ -77,13 +90,12 @@ services:
     env_file:
       - .env
     environment:
-      VITE_API_URL: ${PUBLIC_API_URL:-/api}
+      VITE_API_URL: ${PUBLIC_API_URL:-http://api-gateway:8080/api}
       VITE_PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
     networks:
       - app_network
     depends_on:
       - api
-    # Public website accessible via NPM on port 443
     ports:
       - "3000:3001"
     restart: unless-stopped
