@@ -11,9 +11,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./database/migrations:/migrations:ro
-    # Only expose database on localhost (internal network only)
+    # Expose on local network only (not public internet)
     ports:
-      - "127.0.0.1:5432:5432"
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sunset} -d ${POSTGRES_DB:-sunset_erp}"]
       interval: 5s
@@ -22,9 +22,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Only expose Redis on localhost for local services
+    # Expose on local network only (not public internet)
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
 
   minio:
     image: minio/minio:latest
@@ -34,10 +34,10 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
-    # Only expose MinIO on localhost for local services
+    # Expose on local network only (not public internet)
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "9000:9000"
+      - "9001:9001"
 
   api:
     build:
@@ -52,10 +52,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     networks:
       - app_network
-    # Only expose API on localhost (not accessible from internet)
-    # Nginx Proxy Manager can proxy to localhost:8000
+    # Expose on local network only (not public internet)
+    # Nginx Proxy Manager proxies to this
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -78,9 +78,9 @@ services:
       - app_network
     depends_on:
       - api
-    # Expose frontend on localhost only (NPM proxies to it)
+    # Expose on local network only (not public internet)
     ports:
-      - "127.0.0.1:3000:3001"
+      - "3000:3001"
 
   public-website:
     build:
