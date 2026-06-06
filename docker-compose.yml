@@ -42,8 +42,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     networks:
       - app_network
-    # API is internal only - NOT exposed to public
-    # Only accessible via frontend proxy or from within local network
+    # Expose API on local network for NPM to proxy
+    # NPM on 192.168.7.124 will proxy to this
+    ports:
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
