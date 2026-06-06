@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
+from app.middleware.subdomain_auth import SubdomainAuthMiddleware
 from app.services.communication_service import ensure_communication_schema, imap_poll_loop
 from app.services.setup_verification_service import ensure_setup_schema
 
@@ -46,6 +47,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add subdomain authentication middleware
+app.add_middleware(SubdomainAuthMiddleware, allowed_subdomains=["api"])
 
 app.include_router(api_router)
 

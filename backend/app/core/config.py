@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     s3_use_ssl: bool = False
 
     redis_url: str = "redis://localhost:6379/0"
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,https://sunsetcountryrepair.com,https://www.sunsetcountryrepair.com,https://api.sunsetcountryrepair.com"
 
     smtp_host: str | None = None
     smtp_port: int = 587
