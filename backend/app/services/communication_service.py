@@ -344,6 +344,11 @@ async def send_ticket_sms(
 
 
 async def send_automation(db: AsyncSession, ticket: RepairTicket, event_key: str, user_id: UUID | None = None) -> None:
+    """Send automation emails for ticket events. Currently disabled by default."""
+    # Automation emails are disabled to prevent auto-sending to customers
+    # Email sending must be done explicitly via send_ticket_email() or send_ticket_sms()
+    return
+    # Original logic below (commented out)
     settings = await get_business_settings(db, ticket.business_id)
     if not settings:
         return

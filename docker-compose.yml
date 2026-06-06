@@ -46,9 +46,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://sunset:sunset_dev_password@db:5432/sunset_erp}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-    ports:
-      - "8000:8000"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://api.sunsetcountryrepair.com}
+    networks:
+      - app_network
     depends_on:
       db:
         condition: service_healthy
@@ -68,8 +68,8 @@ services:
     environment:
       VITE_PROXY_TARGET: http://api:8000
       API_PROXY_TARGET: http://api:8000
-    ports:
-      - "5173:5173"
+    networks:
+      - app_network
     depends_on:
       - api
     volumes:
@@ -86,13 +86,17 @@ services:
     env_file:
       - .env
     environment:
-      VITE_API_URL: ${PUBLIC_API_URL:-http://localhost}
+      VITE_API_URL: ${PUBLIC_API_URL:-http://api:8000}
       VITE_PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
-    ports:
-      - "3001:3001"
+    networks:
+      - app_network
     depends_on:
       - api
     restart: unless-stopped
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   postgres_data:
