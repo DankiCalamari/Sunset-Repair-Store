@@ -16,9 +16,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app_network
 
   redis:
     image: redis:7-alpine
+    networks:
+      - app_network
 
   minio:
     image: minio/minio:latest
@@ -28,6 +32,8 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
+    networks:
+      - app_network
 
   api:
     build:
@@ -81,7 +87,7 @@ services:
     depends_on:
       - api-gateway
     ports:
-      - "5173:5173"
+      - "5173:80"
 
   public-website:
     build:
