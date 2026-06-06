@@ -11,9 +11,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./database/migrations:/migrations:ro
-    # Expose on local network only (not public internet)
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sunset} -d ${POSTGRES_DB:-sunset_erp}"]
       interval: 5s
@@ -22,9 +19,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Expose on local network only (not public internet)
-    ports:
-      - "6379:6379"
 
   minio:
     image: minio/minio:latest
@@ -34,10 +28,6 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
-    # Expose on local network only (not public internet)
-    ports:
-      - "9000:9000"
-      - "9001:9001"
 
   api:
     build:
@@ -52,10 +42,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     networks:
       - app_network
-    # Expose on local network only (not public internet)
-    # Nginx Proxy Manager proxies to this
-    ports:
-      - "8000:8000"
+    # API is internal only - NOT exposed to public
+    # Only accessible via frontend proxy or from within local network
     depends_on:
       db:
         condition: service_healthy
@@ -69,18 +57,25 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.public
+      dockerfile: Dockerfile
     env_file:
       - .env
     environment:
-      VITE_API_URL: ${VITE_API_URL:-/api}
+      VITE_PROXY_TARGET: http://api:8000
+      API_PROXY_TARGET: http://api:8000
     networks:
       - app_network
     depends_on:
       - api
-    # Expose on local network only (not public internet)
+    # Frontend accessible via NPM on port 443
     ports:
-      - "3000:3001"
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
 
   public-website:
     build:
@@ -89,12 +84,15 @@ services:
     env_file:
       - .env
     environment:
-      VITE_API_URL: ${PUBLIC_API_URL:-http://api:8000}
+      VITE_API_URL: ${PUBLIC_API_URL:-/api}
       VITE_PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
     networks:
       - app_network
     depends_on:
       - api
+    # Public website accessible via NPM on port 443
+    ports:
+      - "3000:3001"
     restart: unless-stopped
 
 networks:
