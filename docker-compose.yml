@@ -42,10 +42,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     networks:
       - app_network
-    # Expose API on local network for NPM to proxy
-    # NPM on 192.168.7.124 will proxy to this
-    ports:
-      - "8000:8000"
+    # API is internal only - NOT exposed to public
+    # Only accessible via frontend proxy or from within local network
     depends_on:
       db:
         condition: service_healthy
@@ -63,8 +61,7 @@ services:
     env_file:
       - .env
     environment:
-      VITE_PROXY_TARGET: http://api:8000
-      API_PROXY_TARGET: http://api:8000
+      VITE_API_URL: ${VITE_API_URL:-/api}
     networks:
       - app_network
     depends_on:
@@ -72,12 +69,6 @@ services:
     # Frontend accessible via NPM on port 443
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/package-lock.json:/app/package-lock.json
 
   public-website:
     build:
